@@ -45,10 +45,6 @@ class OfficialOfferService
         return $expired;
     }
 
-    /**
-     * Bitta model uchun eng arzon (published) trim narxini topadi.
-     * Figma'dagi "Новая в автосалоне: от XXX сум" shu yerdan chiqadi.
-     */
     public function cheapestForModel(int $modelId): ?OfficialOffer
     {
         return OfficialOffer::query()
