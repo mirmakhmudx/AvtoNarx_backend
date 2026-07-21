@@ -1,0 +1,57 @@
+<?php
+
+namespace App\DTO;
+
+final class ListingData
+{
+    public function __construct(
+        public readonly int $sourceId,
+        public readonly string $externalId,
+        public readonly string $canonicalUrl,
+        public readonly ?string $brandRaw,
+        public readonly ?string $modelRaw,
+        public readonly ?int $year,
+        public readonly int $priceAmount,
+        public readonly string $currency,
+        public readonly string $condition,
+        public readonly string $sellerType,
+        public readonly ?string $region,
+        public readonly ?string $city,
+        public readonly ?\DateTimeImmutable $sourcePublishedAt,
+    ) {
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            sourceId: (int) $data['source_id'],
+            externalId: (string) $data['external_id'],
+            canonicalUrl: (string) $data['canonical_url'],
+            brandRaw: $data['brand_raw'] ?? null,
+            modelRaw: $data['model_raw'] ?? null,
+            year: isset($data['year']) ? (int) $data['year'] : null,
+            priceAmount: (int) $data['price_amount'],
+            currency: (string) ($data['currency'] ?? 'UZS'),
+            condition: (string) ($data['condition'] ?? 'unknown'),
+            sellerType: (string) ($data['seller_type'] ?? 'unknown'),
+            region: $data['region'] ?? null,
+            city: $data['city'] ?? null,
+            sourcePublishedAt: isset($data['source_published_at']) ? new \DateTimeImmutable($data['source_published_at']) : null,
+        );
+    }
+
+    public function computeContentHash(): string
+    {
+        return hash('sha256', implode('|', array(
+            $this->sourceId,
+            $this->externalId,
+            $this->canonicalUrl,
+            $this->brandRaw,
+            $this->modelRaw,
+            $this->year,
+            $this->priceAmount,
+            $this->currency,
+            $this->condition,
+        )));
+    }
+}

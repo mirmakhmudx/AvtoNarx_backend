@@ -1,0 +1,72 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: avtonarx_app
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - avtonarx
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: avtonarx_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - avtonarx
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: avtonarx_postgres
+    environment:
+      POSTGRES_DB: avtonarx
+      POSTGRES_USER: avtonarx
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - avtonarx_pgdata:/var/lib/postgresql/data
+    networks:
+      - avtonarx
+
+  redis:
+    image: redis:7-alpine
+    container_name: avtonarx_redis
+    ports:
+      - "6380:6379"
+    networks:
+      - avtonarx
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: avtonarx_queue
+    working_dir: /var/www/html
+    command: php artisan queue:work --tries=3 --backoff=5
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - avtonarx
+
+networks:
+  avtonarx:
+    driver: bridge
+
+volumes:
+  avtonarx_pgdata:
+    driver: local
