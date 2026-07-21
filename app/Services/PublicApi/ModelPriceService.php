@@ -15,12 +15,6 @@ class ModelPriceService
     ) {
     }
 
-    /**
-     * Har bir mavjud yil uchun (yoki so'ralgan bitta yil uchun) narx holatini qaytaradi.
-     * Agar statistika bo'lsa — to'liq narx.
-     * Agar yetarli tanlanma bo'lmasa (1-9 ta) — insufficient_sample sababi bilan.
-     * Agar umuman e'lon bo'lmasa — no_data.
-     */
     public function getPriceStatuses(CarModel $carModel, ?int $year = null): array
     {
         $query = MarketPriceStatistic::query()->where('model_id', $carModel->id);
