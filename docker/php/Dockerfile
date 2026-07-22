@@ -1,6 +1,5 @@
 FROM php:8.4-fpm-alpine
 
-# System packages
 RUN apk add --no-cache \
     postgresql-dev \
     libzip-dev \
@@ -15,9 +14,9 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     libpng-dev \
     supervisor \
-    $PHPIZE_DEPS
+    chromium \
+    chromium-chromedriver
 
-# PHP Extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo \
@@ -31,20 +30,15 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         intl \
         opcache
 
-# Redis Extension (phpredis)
-RUN pecl install redis \
-    && docker-php-ext-enable redis
-
-# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Working directory
+ENV PANTHER_NO_SANDBOX=1
+ENV PANTHER_CHROME_ARGUMENTS="--headless --disable-gpu --disable-dev-shm-usage"
+ENV PANTHER_CHROME_DRIVER_BINARY=/usr/bin/chromedriver
+
 WORKDIR /var/www/html
 
-# User
-RUN addgroup -g 1000 avtonarx \
-    && adduser -D -u 1000 -G avtonarx avtonarx
-
+RUN addgroup -g 1000 avtonarx && adduser -G avtonarx -u 1000 -D avtonarx
 USER avtonarx
 
 EXPOSE 9000
