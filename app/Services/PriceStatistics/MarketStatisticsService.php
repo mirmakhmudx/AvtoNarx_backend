@@ -2,6 +2,7 @@
 
 namespace App\Services\PriceStatistics;
 
+use App\Enums\Currency;
 use App\Models\MarketListing;
 use App\Models\MarketPriceStatistic;
 
@@ -75,18 +76,36 @@ class MarketStatisticsService
         $earliestListing = (clone $query)->orderBy('first_seen_at')->first();
         $latestListing = (clone $query)->orderByDesc('last_seen_at')->first();
 
-        $pricesUzs = $query->pluck('price_uzs')->filter()->values()->all();
+        // MUHIM TUZATISH: avvalgi versiya pluck('price_uzs')->filter() dan
+        // keyin, faqat natija BUTUNLAY bo'sh bo'lsa price_amount'ga
+        // qaytardi ("hammasi yoki hech narsa" mantig'i). Bu — agar hatto
+        // bitta yozuvda price_uzs to'ldirilgan bo'lsa, price_uzs'i hali
+        // yo'q qolgan barcha boshqa (aslida yaroqli) yozuvlarni tashlab
+        // yuborar edi. Endi HAR BIR qatorni alohida tekshiramiz.
+        $rows = (clone $query)->get(array('price_uzs', 'price_amount', 'currency'));
 
         $prices = array();
-        foreach ($pricesUzs as $p) {
-            $prices[] = (int) $p;
-        }
+        foreach ($rows as $row) {
+            if ($row->price_uzs !== null) {
+                $prices[] = (int) $row->price_uzs;
 
-        if (empty($prices)) {
-            $pricesRaw = $query->where('currency', 'UZS')->pluck('price_amount')->values()->all();
-            foreach ($pricesRaw as $p) {
-                $prices[] = (int) $p;
+                continue;
             }
+
+            // price_uzs hali to'ldirilmagan (masalan konvertatsiya joby
+            // hali ishlamagan) — lekin valyuta UZS bo'lsa, price_amount
+            // to'g'ridan-to'g'ri ishlatilaveradi (konvertatsiya shart emas).
+            // MUHIM: MarketListing modelida 'currency' => Currency::class
+            // (native PHP backed enum) cast qilingan, shuning uchun
+            // $row->currency oddiy satr emas, Currency enum obyekti.
+            // Qattiq solishtiruv uchun Currency::UZS bilan solishtiramiz,
+            // 'UZS' satri bilan emas.
+            if ($row->currency === Currency::UZS) {
+                $prices[] = (int) $row->price_amount;
+            }
+
+            // Boshqa valyuta va price_uzs hali yo'q bo'lsa — bu qatorni
+            // statistikaga qo'shmaymiz (noaniq narx bilan hisoblab bo'lmaydi).
         }
 
         $sampleSizeBeforeFilter = sizeof($prices);
