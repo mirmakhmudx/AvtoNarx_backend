@@ -29,7 +29,6 @@ class OlxUzAdapter
     ) {
     }
 
-
     public function extractFromTarget(ParserTarget $target): array
     {
         $response = Http::withHeaders(array(
@@ -47,24 +46,38 @@ class OlxUzAdapter
         }
 
         $html = $response->body();
+        unset($response);
 
         // Kartochkalar yo'q bo'lsa VA sahifa "haqiqatan bloklangan sahifa"ga
         // o'xshasa (juda qisqa HTML + captcha/robot so'zlari) — to'xtaymiz.
-        // Faqat so'z borligi emas, kontekst (kartochkalar yo'qligi + qisqa HTML) tekshiriladi.
         $cleanHtml = preg_replace('#<style[^>]*>.*?</style>#si', '', $html);
-        $probe = new Crawler($cleanHtml);
-        $cardCount = $probe->filter(self::CARD_SELECTOR)->count();
 
-        if ($cardCount === 0 && $this->looksLikeBlockPage($html)) {
+        $htmlLength = strlen($html);
+        unset($html);
+
+        $crawler = new Crawler($cleanHtml);
+        unset($cleanHtml);
+
+        $cardCount = $crawler->filter(self::CARD_SELECTOR)->count();
+
+        if ($cardCount === 0 && $this->looksLikeBlockPageByLength($htmlLength, $crawler)) {
+            unset($crawler);
+            gc_collect_cycles();
+
             throw new SourceBlockedException('Bloklash sahifasi aniqlandi (CAPTCHA/robot tekshiruvi). To\'xtatildi.');
         }
 
-        $crawler = $probe;
         $results = array();
 
         $crawler->filter(self::CARD_SELECTOR)->each(function (Crawler $card) use (&$results, $target) {
             $results[] = $this->extractCard($card, $target);
         });
+
+        // Katta HTML matni va DOM daraxtini ushlab turgan Crawler obyektini
+        // to'liq bo'shatamiz — bitta job ichida 50-70 marta chaqirilganda
+        // xotira asta-sekin to'planib ketmasligi uchun.
+        unset($crawler);
+        gc_collect_cycles();
 
         return $results;
     }
@@ -73,18 +86,39 @@ class OlxUzAdapter
      * Haqiqiy bloklash sahifasini aniqlaydi — oddiy so'z qidirish emas,
      * "kartochka yo'q + sahifa juda qisqa + blok so'zlari sarlavhada" kombinatsiyasi.
      */
-    private function looksLikeBlockPage(string $html): bool
+    private function looksLikeBlockPageByLength(int $htmlLength, Crawler $crawler): bool
     {
-        if (strlen($html) > 50000) {
+        if ($htmlLength > 50000) {
             // To'liq katalog sahifasi keldi — bu blok sahifasi bo'lishi mumkin emas.
             return false;
         }
 
-        $lowerHtml = mb_strtolower($html);
+        $bodyText = mb_strtolower($crawler->text());
 
-        return str_contains($lowerHtml, 'are you a robot')
-            || str_contains($lowerHtml, 'access denied')
-            || str_contains($lowerHtml, 'pardon the interruption');
+        return str_contains($bodyText, 'are you a robot')
+            || str_contains($bodyText, 'access denied')
+            || str_contains($bodyText, 'pardon the interruption');
+    }
+
+    /**
+     * OLX joylashuv matni ikki xil formatda keladi:
+     *  - "Ташкент, Сергелийский район - 21 июля 2026 г." (tuman bilan)
+     *  - "Бухара - Сегодня в 08:15" (tumansiz, to'g'ridan-to'g'ri sana)
+     * Avvalgi kod faqat vergul bo'yicha bo'lardi, shuning uchun ikkinchi
+     * holatda sana/vaqt ham region sifatida saqlanib qolar edi. Endi
+     * avval " - {sana}" qismini (u doim shu formatda keladi) kesib
+     * tashlaymiz, keyin vergul bo'yicha faqat shahar nomini olamiz.
+     */
+    private function extractRegion(?string $locationText): ?string
+    {
+        if ($locationText === null || $locationText === '') {
+            return null;
+        }
+
+        $withoutDate = trim(preg_replace('/\s*-\s*.*$/u', '', $locationText));
+        $cityOnly = trim(explode(',', $withoutDate)[0]);
+
+        return $cityOnly !== '' ? $cityOnly : null;
     }
 
     private function extractCard(Crawler $card, ParserTarget $target): array
@@ -116,7 +150,7 @@ class OlxUzAdapter
 
         $locationNode = $card->filter(self::LOCATION_SELECTOR);
         $locationText = $locationNode->count() > 0 ? trim($locationNode->text()) : null;
-        $region = $locationText ? trim(explode(',', $locationText)[0]) : null;
+        $region = $this->extractRegion($locationText);
 
         $titleNode = $card->filter(self::TITLE_SELECTOR);
         $titleText = $titleNode->count() > 0 ? trim($titleNode->text()) : '';
