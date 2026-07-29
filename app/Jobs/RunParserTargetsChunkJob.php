@@ -32,9 +32,12 @@ class RunParserTargetsChunkJob implements ShouldQueue
 
     public int $tries = 1;
 
-    // ~100 target x (3s kutish + ~2s so'rov) = taxminan 500-600s.
-    // Xavfsizlik zaxirasi bilan 900s (15 daqiqa) yetarli.
-    public int $timeout = 900;
+    // Pagination bilan bitta target eng yomon holatda ~10 sahifa x
+    // (2s so'rov + 2s kutish) + 3s target-orasi kutish = ~43s bo'lishi
+    // mumkin (aslida ko'pchilik model 1 sahifada tugaydi, bu faqat
+    // xavfsizlik chegarasi). 40 ta target x 43s = ~1720s. Shuning uchun
+    // 1800s (30 daqiqa) — kichik zaxira bilan.
+    public int $timeout = 1800;
 
     /**
      * @param  array<int, int>  $targetIds
@@ -118,6 +121,7 @@ class RunParserTargetsChunkJob implements ShouldQueue
 
             $ingestedCount = 0;
             $rejectedCount = 0;
+            $seenExternalIds = array();
 
             foreach ($results as $result) {
                 if ($result['item'] === null) {
@@ -129,12 +133,21 @@ class RunParserTargetsChunkJob implements ShouldQueue
                 try {
                     $dto = ListingData::fromArray($result['item']);
                     $ingestionService->ingest($dto);
+                    $seenExternalIds[] = $result['item']['external_id'];
                     $ingestedCount++;
                 } catch (\Throwable $e) {
                     Log::warning('RunParserTargetsChunkJob: ingest xatosi — ' . $e->getMessage());
                     $rejectedCount++;
                 }
             }
+
+            // TZ bo'lim 12 ("Snapshot"): target (brend+model sahifasi) TO'LIQ
+            // va muvaffaqiyatli qayta ko'rib chiqilgani uchun — shu sahifada
+            // ko'rilmagan, lekin bazada "active" turgan boshqa e'lonlarning
+            // missing_runs sonini oshiramiz. Faqat shu yerda (exception'siz
+            // muvaffaqiyat yo'lida) chaqiriladi — xato/bloklangan holatlarda
+            // hech narsa deaktivatsiya qilinmaydi.
+            $ingestionService->markMissingForModel($target->source_id, $target->model_id, $seenExternalIds);
 
             $target->update(array(
                 'last_run_at' => now(),

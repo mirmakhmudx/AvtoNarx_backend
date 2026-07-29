@@ -18,4 +18,14 @@ use App\Jobs\RecalculateStatisticsJob;
 use App\Jobs\RunParserSourceJob;
 
 Schedule::job(new RunParserSourceJob('olx_uz'))->dailyAt('23:00');
+
+use App\Jobs\ExpireOfficialOffersJob;
+use App\Jobs\ExpireStaleListingsJob;
+
+// TZ bo'lim 12 (Lifecycle): 72 soat kuzatuvsiz qolgan e'lonlarni inactive
+// qilish — statistika qayta hisoblanishidan OLDIN ishlashi kerak, aks holda
+// eskirgan e'lonlar bir soatga tanlanmaga kirib qolishi mumkin.
+Schedule::job(new ExpireStaleListingsJob())->hourly();
+Schedule::job(new ExpireOfficialOffersJob())->hourly();
+
 Schedule::job(new RecalculateStatisticsJob())->dailyAt('23:45');

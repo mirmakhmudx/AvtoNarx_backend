@@ -22,6 +22,18 @@ class OlxUzAdapter
     private const LOCATION_SELECTOR = '[data-testid="location-date"]';
     private const LINK_SELECTOR = 'a[href^="/d/obyavlenie/"]';
 
+    // Bitta target (brend+model) uchun ko'rib chiqiladigan sahifalarning
+    // yuqori chegarasi — xavfsizlik uchun (masalan mashhur model uchun
+    // OLX'da yuzlab sahifa bo'lsa ham, bitta targetga cheksiz vaqt
+    // sarflanmasligi kerak). TZ_PARSER.md'dagi tavsiya etilgan
+    // max_pages=10 konfiguratsiyasi bilan mos.
+    private const MAX_PAGES_PER_TARGET = 10;
+
+    // Bitta target ichida sahifalar orasidagi qo'shimcha kutish — OLX'ga
+    // haddan tashqari tez-tez so'rov yubormaslik uchun (chunk job'dagi
+    // targetlar orasidagi 3s kutishdan tashqari, qo'shimcha).
+    private const PAGE_REQUEST_DELAY_SECONDS = 2;
+
     public function __construct(
         private readonly MoneyExtractor $moneyExtractor,
         private readonly YearExtractor $yearExtractor,
@@ -29,20 +41,61 @@ class OlxUzAdapter
     ) {
     }
 
+    /**
+     * Bitta target (brend+model sahifasi)ning BARCHA sahifalarini ketma-ket
+     * ko'rib chiqadi (page=1, page=2, ...), sahifa bo'sh kelguncha yoki
+     * MAX_PAGES_PER_TARGET'ga yetguncha. Agar biror sahifada vaqtinchalik
+     * xato (masalan HTTP 500) yoki bloklash chiqsa — target BUTUNLAY
+     * muvaffaqiyatsiz deb hisoblanadi (hozirgacha yig'ilgan natijalar ham
+     * tashlab yuboriladi), chunki chala natija bilan
+     * ListingIngestionService::markMissingForModel chaqirilsa hali
+     * ko'rilmagan keyingi sahifalardagi FAOL e'lonlar noto'g'ri "yo'qolgan"
+     * deb belgilanib qolishi mumkin edi.
+     */
     public function extractFromTarget(ParserTarget $target): array
     {
+        $allResults = array();
+
+        for ($page = 1; $page <= self::MAX_PAGES_PER_TARGET; $page++) {
+            $pageResults = $this->fetchPage($target, $page);
+
+            if ($pageResults === null) {
+                // Sahifada e'lon topilmadi — oxirgi sahifaga yetdik, bu
+                // xato emas, normal tugash.
+                break;
+            }
+
+            $allResults = array_merge($allResults, $pageResults);
+
+            if ($page < self::MAX_PAGES_PER_TARGET) {
+                sleep(self::PAGE_REQUEST_DELAY_SECONDS);
+            }
+        }
+
+        return $allResults;
+    }
+
+    /**
+     * @return array<int, array{item: array|null, rejected_reason: string|null}>|null
+     *         Sahifada kartochka topilmasa — null (oxirgi sahifa belgisi).
+     */
+    private function fetchPage(ParserTarget $target, int $page): ?array
+    {
+        $url = $this->buildPageUrl($target->target_url, $page);
+
         $response = Http::withHeaders(array(
             'User-Agent' => self::USER_AGENT,
-        ))->timeout(15)->get($target->target_url);
+        ))->timeout(15)->get($url);
 
         if ($response->status() === 403 || $response->status() === 429) {
             throw new SourceBlockedException('Manba bloklandi (HTTP ' . $response->status() . '). To\'xtatildi.');
         }
 
         if (! $response->successful()) {
-            // Oddiy xato (404, 500, timeout va h.k.) — bloklash emas.
-            // Faqat shu targetni rad etamiz, boshqa targetlarga davom etish mumkin.
-            throw new \RuntimeException('Sahifa yuklanmadi (HTTP ' . $response->status() . ').');
+            // Oddiy xato (404, 500, timeout va h.k.) — bloklash emas, lekin
+            // shu target uchun to'liq muvaffaqiyatsizlik hisoblanadi (yuqoridagi
+            // izohga qarang).
+            throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP " . $response->status() . ').');
         }
 
         $html = $response->body();
@@ -60,11 +113,20 @@ class OlxUzAdapter
 
         $cardCount = $crawler->filter(self::CARD_SELECTOR)->count();
 
-        if ($cardCount === 0 && $this->looksLikeBlockPageByLength($htmlLength, $crawler)) {
+        if ($cardCount === 0) {
+            if ($this->looksLikeBlockPageByLength($htmlLength, $crawler)) {
+                unset($crawler);
+                gc_collect_cycles();
+
+                throw new SourceBlockedException('Bloklash sahifasi aniqlandi (CAPTCHA/robot tekshiruvi). To\'xtatildi.');
+            }
+
+            // Haqiqiy bo'sh sahifa — target'ning oxirgi sahifasidan
+            // o'tib ketdik, bu normal holat.
             unset($crawler);
             gc_collect_cycles();
 
-            throw new SourceBlockedException('Bloklash sahifasi aniqlandi (CAPTCHA/robot tekshiruvi). To\'xtatildi.');
+            return null;
         }
 
         $results = array();
@@ -80,6 +142,21 @@ class OlxUzAdapter
         gc_collect_cycles();
 
         return $results;
+    }
+
+    /**
+     * OLX pagination'i ?page=N query parametri orqali ishlaydi. Birinchi
+     * sahifa uchun parametr shart emas (target_url'ning o'zi ham ishlaydi).
+     */
+    private function buildPageUrl(string $baseUrl, int $page): string
+    {
+        if ($page === 1) {
+            return $baseUrl;
+        }
+
+        $separator = str_contains($baseUrl, '?') ? '&' : '?';
+
+        return $baseUrl . $separator . 'page=' . $page;
     }
 
     /**

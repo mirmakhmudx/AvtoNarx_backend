@@ -23,6 +23,7 @@ Route::prefix('v1')->group(function () {
     // Parser / Ingestion API — Sanctum token bilan himoyalangan
     Route::middleware('auth:sanctum')->prefix('ingestion')->group(function () {
         Route::post('market-listings/batches', array(IngestionController::class, 'storeMarketListingsBatch'));
+        Route::post('official-offers/batches', array(IngestionController::class, 'storeOfficialOffersBatch'));
         Route::get('batches/{batchId}', array(IngestionController::class, 'showBatch'));
         Route::get('batches/{batchId}/errors', array(IngestionController::class, 'batchErrors'));
         Route::post('heartbeat', array(IngestionController::class, 'heartbeat'));

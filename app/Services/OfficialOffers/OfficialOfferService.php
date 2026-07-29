@@ -3,14 +3,24 @@
 namespace App\Services\OfficialOffers;
 
 use App\Models\OfficialOffer;
+use App\Services\ExchangeRates\ExchangeRateService;
 use Illuminate\Database\Eloquent\Collection;
 
 class OfficialOfferService
 {
+    public function __construct(
+        private readonly ExchangeRateService $exchangeRateService,
+    ) {
+    }
+
     public function create(array $data): OfficialOffer
     {
         $data['publication_status'] = 'pending';
         $data['observed_at'] = now();
+        $data['price_uzs'] = $this->exchangeRateService->convertToUzs(
+            (int) $data['price_amount'],
+            $data['currency'],
+        );
 
         return OfficialOffer::create($data);
     }
