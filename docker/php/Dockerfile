@@ -32,6 +32,10 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Doimiy PHP sozlamalari (masalan memory_limit) — RunParserSourceJob kabi
+# katta HTML sahifalarni qayta ishlaydigan job'lar uchun zarur.
+COPY docker/php/conf.d/custom.ini /usr/local/etc/php/conf.d/zz-custom.ini
+
 ENV PANTHER_NO_SANDBOX=1
 ENV PANTHER_CHROME_ARGUMENTS="--headless --disable-gpu --disable-dev-shm-usage"
 ENV PANTHER_CHROME_DRIVER_BINARY=/usr/bin/chromedriver

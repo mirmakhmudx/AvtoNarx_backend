@@ -14,12 +14,14 @@ class Source extends Model
         'is_active',
         'ingestion_enabled',
         'trust_level',
+        'blocked_until',
         'settings',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'ingestion_enabled' => 'boolean',
+        'blocked_until' => 'datetime',
         'settings' => 'array',
     ];
 
@@ -31,5 +33,14 @@ class Source extends Model
     public function officialOffers()
     {
         return $this->hasMany(OfficialOffer::class);
+    }
+
+    /**
+     * Hozir bu manba "tinch turish" davridami — ya'ni yaqinda 403/429/CAPTCHA
+     * bilan bloklangan va hali qayta urinish uchun vaqt kelmaganmi.
+     */
+    public function isCurrentlyBlocked(): bool
+    {
+        return $this->blocked_until !== null && $this->blocked_until->isFuture();
     }
 }

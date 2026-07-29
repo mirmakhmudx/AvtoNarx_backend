@@ -54,7 +54,26 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: avtonarx_queue
     working_dir: /var/www/html
-    command: php artisan queue:work --tries=3 --backoff=5
+    command: php artisan queue:work --tries=3 --backoff=5 --timeout=3600
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - avtonarx
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: avtonarx_scheduler
+    working_dir: /var/www/html
+    # routes/console.php'dagi Schedule::job(...) yozuvlarini har daqiqada
+    # tekshirib, vaqti kelganlarini navbatga (queue'ga) yuboradi.
+    # Buning o'zi og'ir ishni bajarmaydi — faqat "vaqti keldimi?" deb tekshiradi
+    # va navbatga qo'yadi, haqiqiy ishni yuqoridagi `queue` xizmati bajaradi.
+    command: php artisan schedule:work
     volumes:
       - ./:/var/www/html
     depends_on:
