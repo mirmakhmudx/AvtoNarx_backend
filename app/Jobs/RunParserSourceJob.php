@@ -84,6 +84,9 @@ class RunParserSourceJob implements ShouldQueue
 
                 // Oddiy xato (404, timeout va h.k.) — bloklash emas.
                 // Shu targetni o'tkazib, qolganlarga davom etamiz.
+                unset($e);
+                gc_collect_cycles();
+
                 sleep(self::REQUEST_DELAY_SECONDS);
 
                 continue;
@@ -118,6 +121,12 @@ class RunParserSourceJob implements ShouldQueue
             $totalIngested += $ingestedCount;
             $totalRejected += $rejectedCount;
             $processedTargets++;
+
+            // Katta HTML/Crawler obyektlarini ushlab turgan natijalarni
+            // to'liq bo'shatamiz va majburiy garbage collection ishga tushiramiz —
+            // aks holda 50-70 ta katta sahifa ketma-ket ishlanganda xotira to'planib ketadi.
+            unset($results);
+            gc_collect_cycles();
 
             sleep(self::REQUEST_DELAY_SECONDS);
         }
