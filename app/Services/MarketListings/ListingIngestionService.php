@@ -32,13 +32,28 @@ class ListingIngestionService
             ->where('external_id', $data->externalId)
             ->first();
 
-        $brandId = $data->brandRaw
-            ? $this->aliasService->resolve(EntityType::Brand, $data->brandRaw, $data->sourceId)
-            : null;
+        // Agar parser (masalan OlxUzAdapter) ParserTarget orqali qaysi
+        // brand/model ekanini ALLAQACHON aniq bilsa — shu ID'lar to'g'ridan-to'g'ri
+        // ishlatiladi, alias jadvali orqali nomga qarab qayta izlanmaydi. Bu —
+        // brand/model nomi keyinchalik (admin tomonidan) o'zgartirilsa ham
+        // moslikning buzilmasligini kafolatlaydi, chunki target'ning o'zi
+        // "haqiqat manbai" hisoblanadi.
+        //
+        // Agar bu ID'lar berilmagan bo'lsa (masalan tashqi HTTP Ingestion API
+        // orqali kelgan, parser bizning ichki ID'larimizni bilmaydigan holat) —
+        // avvalgidek brandRaw/modelRaw nomi orqali alias jadvalida izlanadi.
+        if ($data->knownBrandId !== null && $data->knownModelId !== null) {
+            $brandId = $data->knownBrandId;
+            $modelId = $data->knownModelId;
+        } else {
+            $brandId = $data->brandRaw
+                ? $this->aliasService->resolve(EntityType::Brand, $data->brandRaw, $data->sourceId)
+                : null;
 
-        $modelId = $data->modelRaw
-            ? $this->aliasService->resolve(EntityType::Model, $data->modelRaw, $data->sourceId)
-            : null;
+            $modelId = $data->modelRaw
+                ? $this->aliasService->resolve(EntityType::Model, $data->modelRaw, $data->sourceId)
+                : null;
+        }
 
         $normalizationStatus = ($brandId && $modelId) ? 'matched' : 'pending';
 

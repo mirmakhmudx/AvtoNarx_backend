@@ -256,6 +256,8 @@ class OlxUzAdapter
                 'canonical_url' => $canonicalUrl,
                 'brand_raw' => $brandRaw,
                 'model_raw' => $modelRaw,
+                'known_brand_id' => $target->brand_id,
+                'known_model_id' => $target->model_id,
                 'year' => $year,
                 'price_amount' => $money['amount'],
                 'currency' => $money['currency'],
