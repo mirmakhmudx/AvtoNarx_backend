@@ -46,25 +46,12 @@ class IngestionController extends Controller
             ), 403);
         }
 
-        // Idempotentlik: agar shu client + idempotency_key kombinatsiyasi bilan
-        // batch allaqachon mavjud bo'lsa — qayta yaratmasdan, mavjudini qaytaramiz.
-        $existingBatch = IngestionBatch::where('parser_client_id', $client->id)
-            ->where('idempotency_key', $idempotencyKey)
-            ->first();
+        $checksum = hash('sha256', json_encode($data['items']));
 
-        if ($existingBatch !== null) {
-            return response()->json(array(
-                'data' => array(
-                    'batch_id' => $existingBatch->id,
-                    'status' => $existingBatch->status,
-                    'items_total' => $existingBatch->items_total,
-                    'status_url' => '/api/v1/ingestion/batches/' . $existingBatch->id,
-                ),
-                'meta' => array(
-                    'request_id' => (string) Str::uuid(),
-                    'note' => 'Bu batch avval qabul qilingan (idempotency_key mos keldi).',
-                ),
-            ), 202);
+        $resolution = $this->resolveExistingBatch($data['batch_id'], $client->id, $checksum);
+
+        if ($resolution instanceof JsonResponse) {
+            return $resolution;
         }
 
         $batch = IngestionBatch::create(array(
@@ -81,7 +68,7 @@ class IngestionController extends Controller
             'items_total' => count($data['items']),
             'items_accepted' => 0,
             'items_rejected' => 0,
-            'payload_checksum' => hash('sha256', json_encode($data['items'])),
+            'payload_checksum' => $checksum,
         ));
 
         ProcessIngestionBatchJob::dispatch($batch->id, $data['items']);
@@ -148,23 +135,12 @@ class IngestionController extends Controller
             ), 403);
         }
 
-        $existingBatch = IngestionBatch::where('parser_client_id', $client->id)
-            ->where('idempotency_key', $idempotencyKey)
-            ->first();
+        $checksum = hash('sha256', json_encode($data['items']));
 
-        if ($existingBatch !== null) {
-            return response()->json(array(
-                'data' => array(
-                    'batch_id' => $existingBatch->id,
-                    'status' => $existingBatch->status,
-                    'items_total' => $existingBatch->items_total,
-                    'status_url' => '/api/v1/ingestion/batches/' . $existingBatch->id,
-                ),
-                'meta' => array(
-                    'request_id' => (string) Str::uuid(),
-                    'note' => 'Bu batch avval qabul qilingan (idempotency_key mos keldi).',
-                ),
-            ), 202);
+        $resolution = $this->resolveExistingBatch($data['batch_id'], $client->id, $checksum);
+
+        if ($resolution instanceof JsonResponse) {
+            return $resolution;
         }
 
         $batch = IngestionBatch::create(array(
@@ -181,7 +157,7 @@ class IngestionController extends Controller
             'items_total' => count($data['items']),
             'items_accepted' => 0,
             'items_rejected' => 0,
-            'payload_checksum' => hash('sha256', json_encode($data['items'])),
+            'payload_checksum' => $checksum,
         ));
 
         ProcessOfficialOfferBatchJob::dispatch($batch->id, $data['items']);
@@ -207,12 +183,90 @@ class IngestionController extends Controller
         ), 202);
     }
 
-    public function showBatch(string $batchId): JsonResponse
+    /**
+     * TZ bo'lim 9 (Idempotentlik va deduplikatsiya):
+     *  1. Bir xil client va Idempotency-Key bilan takror so'rov avvalgi
+     *     natijani qaytaradi.
+     *  2. Boshqa checksum bilan bir xil batch_id 409 qaytaradi.
+     *
+     * batch_id — bu ingestion_batches jadvalining PRIMARY KEY'i (parserning
+     * o'zi generatsiya qilgan UUID), shuning uchun tekshiruv avvalo shu
+     * PK bo'yicha bo'lishi kerak, idempotency_key bo'yicha emas — aks holda
+     * bir xil batch_id boshqa Idempotency-Key yoki boshqa checksum bilan
+     * qayta yuborilganda hech narsa ushlanmay, DB PRIMARY KEY unique
+     * cheklovida kutilmagan xatoga (500) olib keladi.
+     *
+     * @return JsonResponse|null  JsonResponse — darhol qaytarilishi kerak bo'lgan
+     *                            javob (mos keldi yoki konflikt). null — bunday
+     *                            batch_id hali mavjud emas, yangisini yaratish mumkin.
+     */
+    private function resolveExistingBatch(
+        string $batchId,
+        int $clientId,
+        string $checksum,
+    ): ?JsonResponse {
+        $existingBatch = IngestionBatch::find($batchId);
+
+        if ($existingBatch === null) {
+            return null;
+        }
+
+        // Bu batch_id boshqa parser client'ga tegishli — o'zganing UUID'ini
+        // "band qilib qo'yish" imkoniyatini bermaslik uchun ham konflikt
+        // sifatida qaytariladi.
+        if ($existingBatch->parser_client_id !== $clientId) {
+            return response()->json(array(
+                'message' => 'Bu batch_id boshqa parser client tomonidan band qilingan.',
+                'code' => 'duplicate_batch_conflict',
+            ), 409);
+        }
+
+        // Bir xil client, bir xil batch_id, lekin checksum boshqacha —
+        // ya'ni parser aynan shu batch_id ostida BOSHQA ma'lumot yubormoqchi.
+        // TZ: bunday holat 409 bilan rad etiladi.
+        if ($existingBatch->payload_checksum !== $checksum) {
+            return response()->json(array(
+                'message' => 'Bu batch_id avval boshqa (mos kelmaydigan) tarkib bilan qabul qilingan.',
+                'code' => 'duplicate_batch_conflict',
+            ), 409);
+        }
+
+        // Checksum bir xil — bu haqiqiy replay (masalan parser javobni
+        // ololmay qayta yuborgan). Avvalgi natijani qaytaramiz, qayta
+        // ishlamaymiz va qayta navbatga qo'ymaymiz.
+        return response()->json(array(
+            'data' => array(
+                'batch_id' => $existingBatch->id,
+                'status' => $existingBatch->status,
+                'items_total' => $existingBatch->items_total,
+                'status_url' => '/api/v1/ingestion/batches/' . $existingBatch->id,
+            ),
+            'meta' => array(
+                'request_id' => (string) Str::uuid(),
+                'note' => 'Bu batch avval qabul qilingan (idempotent takror so\'rov).',
+            ),
+        ), 202);
+    }
+
+    public function showBatch(string $batchId, Request $request): JsonResponse
     {
         $batch = IngestionBatch::find($batchId);
 
         if ($batch === null) {
             return response()->json(array('message' => 'Batch topilmadi.'), 404);
+        }
+
+        $client = $request->user();
+
+        // TZ bo'lim 6: parser client faqat o'z batch'larini o'qishi mumkin.
+        // TZ bo'lim 14: administrator uchun "batch va xatolar"ni ko'rish —
+        // moderatsiya funksiyasi, shuning uchun administrator har qanday
+        // batch'ni ko'ra oladi.
+        $isOwner = $client instanceof \App\Models\ParserClient && $batch->parser_client_id === $client->id;
+        $isAdmin = $client instanceof \App\Models\User && $client->isAdministrator();
+
+        if (! $isOwner && ! $isAdmin) {
+            return response()->json(array('message' => 'Bu batch sizga tegishli emas.'), 403);
         }
 
         $errors = $batch->itemErrors()
@@ -249,6 +303,15 @@ class IngestionController extends Controller
 
         if ($batch === null) {
             return response()->json(array('message' => 'Batch topilmadi.'), 404);
+        }
+
+        $client = $request->user();
+
+        $isOwner = $client instanceof \App\Models\ParserClient && $batch->parser_client_id === $client->id;
+        $isAdmin = $client instanceof \App\Models\User && $client->isAdministrator();
+
+        if (! $isOwner && ! $isAdmin) {
+            return response()->json(array('message' => 'Bu batch sizga tegishli emas.'), 403);
         }
 
         $errors = $batch->itemErrors()

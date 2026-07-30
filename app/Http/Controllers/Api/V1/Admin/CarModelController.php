@@ -18,6 +18,8 @@ class CarModelController extends Controller
 
     public function store(StoreCarModelRequest $request): CarModelResource
     {
+        $this->authorize('create', CarModel::class);
+
         return CarModelResource::make(
             $this->carModelService->create($request->validated())
         );
@@ -25,6 +27,8 @@ class CarModelController extends Controller
 
     public function update(UpdateCarModelRequest $request, CarModel $carModel): CarModelResource
     {
+        $this->authorize('update', $carModel);
+
         return CarModelResource::make(
             $this->carModelService->update($carModel, $request->validated())
         );
