@@ -52,7 +52,11 @@ it('creates a new listing when it does not exist yet', function () {
 
     expect(MarketListing::count())->toBe(1);
     expect($listing->price_amount)->toBe(145000000);
-    expect($listing->status)->toBe('pending'); // hali alias yo'q
+    // status (lifecycle: active/inactive) va normalization_status (moslik:
+    // matched/pending) — ikki xil maydon. Yangi ko'rilgan e'lon har doim
+    // "active" bo'ladi; hali alias yo'qligi normalization_status'da ko'rinadi.
+    expect($listing->status->value)->toBe('active');
+    expect($listing->normalization_status->value)->toBe('pending'); // hali alias yo'q
 });
 
 it('resolves brand/model via alias and marks as matched', function () {
