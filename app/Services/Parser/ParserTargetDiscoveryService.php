@@ -27,10 +27,6 @@ class ParserTargetDiscoveryService
         'а' => 'a', 'е' => 'e', 'о' => 'o', 'р' => 'p', 'с' => 'c', 'х' => 'x',
     );
 
-    /**
-     * Bular marka/model nomi emas — sayt UI elementlari yoki filtrlash
-     * bo'limlari. Auto-yaratishdan oldin rad etiladi, "pending"ga tushadi.
-     */
     private const REJECT_KEYWORDS = array('область', 'каракалпакстан', 'другие', 'показать', 'все категории');
 
     public function __construct(
@@ -201,9 +197,7 @@ class ParserTargetDiscoveryService
             return null;
         }
 
-        $discoveredBrand = DiscoveredBrand::where('source_id', $source->id)
-            ->whereRaw('LOWER(name) = ?', array(mb_strtolower(trim($brandNameRaw))))
-            ->first();
+        $discoveredBrand = $this->findDiscoveredBrandByName($source->id, $brandNameRaw);
 
         if ($discoveredBrand === null) {
             // Kashfiyot bosqichidan o'tmagan — bu qayerdandir boshqa yo'l
@@ -225,6 +219,24 @@ class ParserTargetDiscoveryService
         $this->aliasService->verify($brandAlias);
 
         return $brand->id;
+    }
+
+    /**
+     * DB darajasidagi LOWER() ga tayanmaydi — SQLite'ning standart LOWER()
+     * funksiyasi faqat ASCII harflarni kichiklashtiradi, kirillcha nomlar
+     * uchun ishlamaydi (masalan "УАЗ" o'zgarmay qoladi). Shuning uchun
+     * solishtirishni PHP tarafida, mb_strtolower() bilan qilamiz — bu
+     * SQLite'da ham, PostgreSQL'da ham bir xil, to'g'ri natija beradi.
+     * Bitta source'dagi discovered_brands soni katta emas (bir necha yuzta),
+     * shuning uchun xotirada solishtirish arzon.
+     */
+    private function findDiscoveredBrandByName(int $sourceId, string $brandNameRaw): ?DiscoveredBrand
+    {
+        $target = mb_strtolower(trim($brandNameRaw));
+
+        return DiscoveredBrand::where('source_id', $sourceId)
+            ->get()
+            ->first(fn (DiscoveredBrand $discovered) => mb_strtolower(trim($discovered->name)) === $target);
     }
 
     /**

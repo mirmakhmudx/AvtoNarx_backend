@@ -2,14 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class ParserClient extends Model
+/**
+ * MUHIM: AuthenticatableContract'ni implement qilish va Authenticatable
+ * trait'ini ulash SHART. HasApiTokens (Sanctum) o'zi buni bermaydi — u
+ * faqat token yaratish/tekshirish logikasini qo'shadi. Auth guard
+ * (auth:sanctum middleware) foydalanuvchini o'rnatishda
+ * (RequestGuard::setUser()) argumentning Authenticatable ekanligini
+ * TIPI bo'yicha tekshiradi; shu interfeyssiz har qanday haqiqiy
+ * Bearer-token so'rovi ham runtime TypeError bilan yiqiladi (bu shunchaki
+ * test emas, productionda ham aynan shunday buzilardi).
+ */
+class ParserClient extends Model implements AuthenticatableContract
 {
-    use HasApiTokens, Notifiable;
+    use Authenticatable, HasApiTokens, Notifiable;
 
     protected $fillable = array(
         'name',
