@@ -185,6 +185,64 @@ it('is idempotent: replaying the same Idempotency-Key does not create a second b
     expect(IngestionBatch::count())->toBe(1);
 });
 
+it('returns 409 duplicate_batch_conflict when the same batch_id is resent with different content', function () {
+    actingAsParserClient();
+    $batchId = (string) Str::uuid();
+
+    $first = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+    $first->assertStatus(202);
+
+    // Xuddi shu batch_id, lekin BOSHQA Idempotency-Key va BOSHQA item tarkibi
+    // (turli external_id) bilan qayta yuborilmoqda.
+    $second = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+
+    $second->assertStatus(409);
+    expect($second->json('code'))->toBe('duplicate_batch_conflict');
+    expect(IngestionBatch::count())->toBe(1);
+});
+
+it('returns 409 when a different parser client reuses someone else\'s batch_id', function () {
+    actingAsParserClient();
+    $batchId = (string) Str::uuid();
+
+    $first = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+    $first->assertStatus(202);
+
+    $otherClient = ParserClient::create(array(
+        'name' => 'Other parser',
+        'is_active' => true,
+        'allowed_source_ids' => array($this->marketplaceSource->id),
+    ));
+    Sanctum::actingAs($otherClient, ['*']);
+
+    $second = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+
+    $second->assertStatus(409);
+    expect($second->json('code'))->toBe('duplicate_batch_conflict');
+});
+
+it('forbids a parser client from reading another client\'s batch status', function () {
+    actingAsParserClient();
+
+    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload());
+    $batchId = $response->json('data.batch_id');
+
+    $otherClient = ParserClient::create(array(
+        'name' => 'Other parser',
+        'is_active' => true,
+        'allowed_source_ids' => array($this->marketplaceSource->id),
+    ));
+    Sanctum::actingAs($otherClient, ['*']);
+
+    $this->getJson("/api/v1/ingestion/batches/{$batchId}")->assertStatus(403);
+    $this->getJson("/api/v1/ingestion/batches/{$batchId}/errors")->assertStatus(403);
+});
+
 // --- official-offers/batches ---
 
 it('rejects official-offers batches from a marketplace-type source', function () {

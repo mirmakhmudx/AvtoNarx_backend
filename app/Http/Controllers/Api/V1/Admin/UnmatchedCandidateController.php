@@ -21,6 +21,8 @@ class UnmatchedCandidateController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', UnmatchedBrandModelCandidate::class);
+
         $brandFilter = $request->query('brand');
 
         return UnmatchedCandidateResource::collection(
@@ -30,6 +32,8 @@ class UnmatchedCandidateController extends Controller
 
     public function countsByBrand(): JsonResponse
     {
+        $this->authorize('viewAny', UnmatchedBrandModelCandidate::class);
+
         return response()->json(array(
             'brands' => $this->candidateService->pendingCountsByBrand(),
         ));
@@ -37,6 +41,8 @@ class UnmatchedCandidateController extends Controller
 
     public function resolve(ResolveCandidateRequest $request, UnmatchedBrandModelCandidate $unmatchedCandidate): JsonResponse
     {
+        $this->authorize('resolve', $unmatchedCandidate);
+
         $data = $request->validated();
 
         $carModel = $this->candidateService->resolve(
@@ -55,6 +61,8 @@ class UnmatchedCandidateController extends Controller
 
     public function ignore(UnmatchedBrandModelCandidate $unmatchedCandidate): JsonResponse
     {
+        $this->authorize('ignore', $unmatchedCandidate);
+
         $this->candidateService->ignore($unmatchedCandidate);
 
         return response()->json(array('message' => 'Candidate e\'tiborsiz qoldirildi.'));
@@ -62,6 +70,8 @@ class UnmatchedCandidateController extends Controller
 
     public function bulkIgnore(BulkIgnoreCandidatesRequest $request): JsonResponse
     {
+        $this->authorize('viewAny', UnmatchedBrandModelCandidate::class);
+
         $count = $this->candidateService->bulkIgnore($request->validated()['ids']);
 
         return response()->json(array(
@@ -72,6 +82,8 @@ class UnmatchedCandidateController extends Controller
 
     public function ignoreAllPending(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', UnmatchedBrandModelCandidate::class);
+
         $brandFilter = $request->query('brand');
 
         $count = $this->candidateService->ignoreAllPending($brandFilter);
