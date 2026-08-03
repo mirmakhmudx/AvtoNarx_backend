@@ -3,7 +3,6 @@
 use App\Enums\EntityType;
 use App\Models\Brand;
 use App\Models\CarModel;
-use App\Models\DiscoveredBrand;
 use App\Models\ParserTarget;
 use App\Models\Source;
 use App\Models\UnmatchedBrandModelCandidate;
@@ -25,192 +24,124 @@ beforeEach(function () {
         'settings' => array(),
     ));
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
-    $this->model = CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
-
+    $this->aliasService = app(CatalogAliasService::class);
     $this->service = app(ParserTargetDiscoveryService::class);
 });
 
 it('creates a parser target directly when brand/model already resolve via verified aliases', function () {
-    $aliasService = app(CatalogAliasService::class);
+    $brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
+    $model = CarModel::create(array('brand_id' => $brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
 
-    $brandAlias = $aliasService->createPendingAlias(EntityType::Brand, $this->brand->id, 'Chevrolet', $this->source->id);
-    $aliasService->verify($brandAlias);
-
-    $modelAlias = $aliasService->createPendingAlias(EntityType::Model, $this->model->id, 'Cobalt', $this->source->id);
-    $aliasService->verify($modelAlias);
+    $brandAlias = $this->aliasService->createPendingAlias(EntityType::Brand, $brand->id, 'Chevrolet', $this->source->id);
+    $this->aliasService->verify($brandAlias);
+    $modelAlias = $this->aliasService->createPendingAlias(EntityType::Model, $model->id, 'Cobalt', $this->source->id);
+    $this->aliasService->verify($modelAlias);
 
     $result = $this->service->processDiscoveredCombinations($this->source, array(
         array('brand_name' => 'Chevrolet', 'model_name' => 'Cobalt', 'url' => 'https://www.olx.uz/x/cobalt/'),
     ));
 
     expect($result['matched'])->toBe(1);
-    expect($result['auto_created'])->toBe(0);
     expect($result['unmatched'])->toBe(0);
+    expect($result['skipped_junk'])->toBe(0);
     expect(ParserTarget::count())->toBe(1);
 
     $target = ParserTarget::first();
-    expect($target->brand_id)->toBe($this->brand->id);
-    expect($target->model_id)->toBe($this->model->id);
-    expect($target->is_active)->toBeTrue();
+    expect($target->brand_id)->toBe($brand->id);
+    expect($target->model_id)->toBe($model->id);
+    expect(CarModel::count())->toBe(1); // hech qanday yangi model yaratilmadi
 });
 
-it('auto-creates brand and model when the brand passed discovery but is not yet in the catalog', function () {
-    DiscoveredBrand::create(array(
-        'source_id' => $this->source->id,
-        'name' => 'Toyota',
-        'slug' => 'toyota',
-        'discovered_url' => 'https://www.olx.uz/transport/legkovye-avtomobili/toyota/',
-    ));
-
+it('never auto-creates a brand or model, even when the brand is well known — it goes to the pending queue instead', function () {
     $result = $this->service->processDiscoveredCombinations($this->source, array(
         array('brand_name' => 'Toyota', 'model_name' => 'Camry', 'url' => 'https://www.olx.uz/x/toyota/camry/'),
     ));
 
     expect($result['matched'])->toBe(0);
-    expect($result['auto_created'])->toBe(1);
-    expect($result['unmatched'])->toBe(0);
-
-    $brand = Brand::where('slug', 'toyota')->first();
-    expect($brand)->not->toBeNull();
-
-    $model = CarModel::where('brand_id', $brand->id)->where('name', 'Camry')->first();
-    expect($model)->not->toBeNull();
-
-    expect(ParserTarget::where('brand_id', $brand->id)->where('model_id', $model->id)->exists())->toBeTrue();
-});
-
-it('falls back to the pending queue when the brand has not passed the discovery quality filter', function () {
-    $result = $this->service->processDiscoveredCombinations($this->source, array(
-        array('brand_name' => 'SomeUnknownBrand', 'model_name' => 'X1', 'url' => 'https://www.olx.uz/x/unknown/x1/'),
-    ));
-
-    expect($result['matched'])->toBe(0);
-    expect($result['auto_created'])->toBe(0);
     expect($result['unmatched'])->toBe(1);
+    expect(Brand::count())->toBe(0); // TZ 10-bo'lim: avtomatik yaratish taqiqlangan
+    expect(CarModel::count())->toBe(0);
 
     expect(
-        UnmatchedBrandModelCandidate::where('brand_name_raw', 'SomeUnknownBrand')
+        UnmatchedBrandModelCandidate::where('brand_name_raw', 'Toyota')
+            ->where('model_name_raw', 'Camry')
             ->where('status', 'pending')
             ->exists()
     )->toBeTrue();
 });
 
-it('merges Cyrillic/Latin visual duplicate model names into a single model instead of creating a new one', function () {
-    DiscoveredBrand::create(array(
-        'source_id' => $this->source->id,
-        'name' => 'Audi',
-        'slug' => 'audi',
-        'discovered_url' => 'https://www.olx.uz/transport/legkovye-avtomobili/audi/',
-    ));
-
-    // Avval lotincha "A5" bilan.
-    $this->service->processDiscoveredCombinations($this->source, array(
-        array('brand_name' => 'Audi', 'model_name' => 'A5', 'url' => 'https://www.olx.uz/x/audi/a5/'),
-    ));
-
-    $brand = Brand::where('slug', 'audi')->first();
-    expect(CarModel::where('brand_id', $brand->id)->count())->toBe(1);
-
-    // Endi kirillcha "А5" — ko'rinishi bir xil, lekin boshqa Unicode belgi.
+it('rejects junk (region/pagination-like) names without adding them to the pending queue', function () {
     $result = $this->service->processDiscoveredCombinations($this->source, array(
-        array('brand_name' => 'Audi', 'model_name' => 'А5', 'url' => 'https://www.olx.uz/x/audi/a5-cyrillic/'),
+        array('brand_name' => 'Chevrolet', 'model_name' => 'область', 'url' => 'https://www.olx.uz/x/chevrolet/region/'),
     ));
 
-    // Yangi CarModel yaratilmasligi kerak — mavjudiga alias sifatida qo'shiladi.
-    expect(CarModel::where('brand_id', $brand->id)->count())->toBe(1);
-    expect($result['auto_created'])->toBe(1);
+    expect($result['skipped_junk'])->toBe(1);
     expect($result['unmatched'])->toBe(0);
+    expect(UnmatchedBrandModelCandidate::count())->toBe(0);
 });
 
-it('rejects junk (too short) model names and leaves them in the pending queue', function () {
-    DiscoveredBrand::create(array(
-        'source_id' => $this->source->id,
-        'name' => 'Chevrolet',
-        'slug' => 'chevrolet',
-        'discovered_url' => 'https://www.olx.uz/transport/legkovye-avtomobili/chevrolet/',
-    ));
-
+it('rejects too-short model names as junk', function () {
     $result = $this->service->processDiscoveredCombinations($this->source, array(
         array('brand_name' => 'Chevrolet', 'model_name' => 'G', 'url' => 'https://www.olx.uz/x/chevrolet/g/'),
     ));
 
-    expect($result['auto_created'])->toBe(0);
-    expect($result['unmatched'])->toBe(1);
-
-    expect(
-        UnmatchedBrandModelCandidate::where('model_name_raw', 'G')
-            ->where('status', 'pending')
-            ->exists()
-    )->toBeTrue();
+    expect($result['skipped_junk'])->toBe(1);
+    expect(UnmatchedBrandModelCandidate::count())->toBe(0);
 });
 
-it('accepts purely numeric model codes (e.g. UAZ-style) instead of rejecting them as junk', function () {
-    DiscoveredBrand::create(array(
-        'source_id' => $this->source->id,
-        'name' => 'УАЗ',
-        'slug' => 'uaz',
-        'discovered_url' => 'https://www.olx.uz/transport/legkovye-avtomobili/uaz/',
-    ));
-
+it('accepts purely numeric model codes (e.g. UAZ-style) into the pending queue instead of rejecting them as junk', function () {
     $result = $this->service->processDiscoveredCombinations($this->source, array(
         array('brand_name' => 'УАЗ', 'model_name' => '31512-010', 'url' => 'https://www.olx.uz/x/uaz/31512-010/'),
     ));
 
-    expect($result['auto_created'])->toBe(1);
-    expect($result['unmatched'])->toBe(0);
-
-    $brand = Brand::where('slug', 'uaz')->first();
-    expect(CarModel::where('brand_id', $brand->id)->where('name', '31512-010')->exists())->toBeTrue();
+    expect($result['unmatched'])->toBe(1);
+    expect($result['skipped_junk'])->toBe(0);
+    expect(UnmatchedBrandModelCandidate::where('model_name_raw', '31512-010')->exists())->toBeTrue();
 });
 
-it('reprocessPendingCandidates resolves previously pending candidates once auto-creation applies', function () {
-    DiscoveredBrand::create(array(
-        'source_id' => $this->source->id,
-        'name' => 'Nissan',
-        'slug' => 'nissan',
-        'discovered_url' => 'https://www.olx.uz/transport/legkovye-avtomobili/nissan/',
+it('sets first_seen_at only once and keeps updating last_seen_at on repeated discovery', function () {
+    $this->service->processDiscoveredCombinations($this->source, array(
+        array('brand_name' => 'Toyota', 'model_name' => 'Camry', 'url' => 'https://www.olx.uz/x/toyota/camry/'),
     ));
 
-    UnmatchedBrandModelCandidate::create(array(
-        'source_id' => $this->source->id,
-        'brand_name_raw' => 'Nissan',
-        'model_name_raw' => 'Qashqai',
-        'discovered_url' => 'https://www.olx.uz/x/nissan/qashqai/',
-        'status' => 'pending',
-        'first_seen_at' => now(),
-        'last_seen_at' => now(),
+    $first = UnmatchedBrandModelCandidate::where('model_name_raw', 'Camry')->first();
+    $firstSeenAt = $first->first_seen_at;
+
+    $this->travel(1)->days();
+
+    $this->service->processDiscoveredCombinations($this->source, array(
+        array('brand_name' => 'Toyota', 'model_name' => 'Camry', 'url' => 'https://www.olx.uz/x/toyota/camry/'),
     ));
 
-    $result = $this->service->reprocessPendingCandidates();
+    $second = UnmatchedBrandModelCandidate::where('model_name_raw', 'Camry')->first();
 
-    expect($result['auto_created'])->toBe(1);
-    expect($result['still_pending'])->toBe(0);
-
-    $brand = Brand::where('slug', 'nissan')->first();
-    expect($brand)->not->toBeNull();
-    expect(CarModel::where('brand_id', $brand->id)->where('name', 'Qashqai')->exists())->toBeTrue();
-
-    $candidate = UnmatchedBrandModelCandidate::where('model_name_raw', 'Qashqai')->first();
-    expect($candidate->status)->toBe('resolved');
+    expect(UnmatchedBrandModelCandidate::count())->toBe(1);
+    expect($second->first_seen_at->equalTo($firstSeenAt))->toBeTrue();
+    expect($second->last_seen_at->greaterThan($firstSeenAt))->toBeTrue();
 });
 
-it('reprocessPendingCandidates leaves genuinely junky candidates untouched', function () {
-    UnmatchedBrandModelCandidate::create(array(
-        'source_id' => $this->source->id,
-        'brand_name_raw' => 'Mitsubishi',
-        'model_name_raw' => 'i',
-        'discovered_url' => 'https://www.olx.uz/x/mitsubishi/i/',
-        'status' => 'pending',
-        'first_seen_at' => now(),
-        'last_seen_at' => now(),
+it('merges Cyrillic/Latin visual duplicates in the pending queue via deduplicatePendingCandidates', function () {
+    $this->service->processDiscoveredCombinations($this->source, array(
+        array('brand_name' => 'Audi', 'model_name' => 'A5', 'url' => 'https://www.olx.uz/x/audi/a5/'),
+        array('brand_name' => 'Audi', 'model_name' => 'А5', 'url' => 'https://www.olx.uz/x/audi/a5-cyrillic/'), // "А5" — kirillcha А
     ));
 
-    $result = $this->service->reprocessPendingCandidates();
+    expect(UnmatchedBrandModelCandidate::count())->toBe(2);
 
-    expect($result['auto_created'])->toBe(0);
-    expect($result['still_pending'])->toBe(1);
+    $result = $this->service->deduplicatePendingCandidates();
 
-    $candidate = UnmatchedBrandModelCandidate::where('model_name_raw', 'i')->first();
-    expect($candidate->status)->toBe('pending');
+    expect($result['merged'])->toBe(1);
+    expect(UnmatchedBrandModelCandidate::count())->toBe(1);
+});
+
+it('does not merge genuinely different model names', function () {
+    $this->service->processDiscoveredCombinations($this->source, array(
+        array('brand_name' => 'Audi', 'model_name' => 'A5', 'url' => 'https://www.olx.uz/x/audi/a5/'),
+        array('brand_name' => 'Audi', 'model_name' => 'A6', 'url' => 'https://www.olx.uz/x/audi/a6/'),
+    ));
+
+    $result = $this->service->deduplicatePendingCandidates();
+
+    expect($result['merged'])->toBe(0);
+    expect(UnmatchedBrandModelCandidate::count())->toBe(2);
 });

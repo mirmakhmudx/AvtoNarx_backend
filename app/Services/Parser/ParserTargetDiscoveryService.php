@@ -3,23 +3,19 @@
 namespace App\Services\Parser;
 
 use App\Enums\EntityType;
-use App\Models\Brand;
 use App\Models\CarModel;
-use App\Models\DiscoveredBrand;
 use App\Models\ParserTarget;
 use App\Models\Source;
 use App\Models\UnmatchedBrandModelCandidate;
 use App\Services\Catalog\CatalogAliasService;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Str;
 
 class ParserTargetDiscoveryService
 {
     /**
      * Model kodlarida (A5, X5, E200 kabi) uchraydigan, ko'rinishi bir xil
-     * kirill/lotin harflar. Faqat shu holatlarda ikkalasi BIR XIL model
-     * sifatida birlashtiriladi — umuman kirill nomlarni lotinga
-     * "tarjima qilish" emas, faqat vizual duplikatlarni yo'qotish uchun.
+     * kirill/lotin harflar. Faqat "pending" navbatidagi vizual duplikatlarni
+     * bitta yozuvga birlashtirish uchun ishlatiladi — katalogga yangi model
+     * yaratish uchun EMAS (bu TZ 10-bo'lim bo'yicha taqiqlangan).
      */
     private const CYRILLIC_TO_LATIN_MAP = array(
         'А' => 'A', 'В' => 'B', 'Е' => 'E', 'К' => 'K', 'М' => 'M',
@@ -35,13 +31,23 @@ class ParserTargetDiscoveryService
     }
 
     /**
-     * @return array{matched: int, auto_created: int, unmatched: int}
+     * TZ 10-bo'lim, so'zma-so'z: "Parser payload'idan yangi markalar va
+     * modellarni avtomatik yaratish taqiqlangan." Shuning uchun bu metod
+     * HECH QACHON Brand yoki CarModel yaratmaydi — faqat:
+     *   1) allaqachon tasdiqlangan (verified) alias orqali mos kelsa —
+     *      parser_target faollashtiriladi;
+     *   2) mos kelmasa — "chiqindi" (viloyat, sahifalash, bo'sh) nomlar
+     *      chiqarib tashlanadi, qolgani esa unmatched_brand_model_candidates
+     *      navbatiga tushadi va Muharrir (Content Editor) tomonidan qo'lda
+     *      ko'rib chiqilishini kutadi.
+     *
+     * @return array{matched: int, unmatched: int, skipped_junk: int}
      */
     public function processDiscoveredCombinations(Source $source, array $discovered): array
     {
         $matchedCount = 0;
-        $autoCreatedCount = 0;
         $unmatchedCount = 0;
+        $skippedJunkCount = 0;
 
         foreach ($discovered as $entry) {
             $brandId = $this->aliasService->resolve(EntityType::Brand, $entry['brand_name'], $source->id);
@@ -54,202 +60,76 @@ class ParserTargetDiscoveryService
                 continue;
             }
 
-            $autoResult = $this->tryAutoCreate($source, $entry, $brandId);
-
-            if ($autoResult !== null) {
-                $this->activateParserTarget($source, $autoResult['brand_id'], $autoResult['model_id'], $entry['url']);
-                $autoCreatedCount++;
+            if ($this->looksLikeJunkName($entry['brand_name']) || $this->looksLikeJunkName($entry['model_name'])) {
+                // Viloyat, sahifalash, bo'sh nom kabi "chiqindi" — bu Muharrir
+                // vaqtini olmasligi uchun kutish navbatiga ham qo'shilmaydi.
+                $skippedJunkCount++;
 
                 continue;
             }
 
-            UnmatchedBrandModelCandidate::updateOrCreate(
-                array(
-                    'source_id' => $source->id,
-                    'brand_name_raw' => $entry['brand_name'],
-                    'model_name_raw' => $entry['model_name'],
-                ),
-                array(
-                    'discovered_url' => $entry['url'],
-                    'status' => 'pending',
-                    'first_seen_at' => now(),
-                    'last_seen_at' => now(),
-                )
-            );
-
+            $this->upsertPendingCandidate($source, $entry);
             $unmatchedCount++;
         }
 
-        return array('matched' => $matchedCount, 'auto_created' => $autoCreatedCount, 'unmatched' => $unmatchedCount);
+        return array('matched' => $matchedCount, 'unmatched' => $unmatchedCount, 'skipped_junk' => $skippedJunkCount);
     }
 
     /**
-     * Hozirgi "pending" navbatidagi (avval, aqlli avtomatik mantiq
-     * qo'shilishidan OLDIN yig'ilgan) yozuvlarni qayta ishlaydi — yangi HTTP
-     * so'rovsiz, chunki brand/model/URL allaqachon saqlangan.
+     * Kutish navbatidagi vizual duplikatlarni (masalan "A5" va "А5")
+     * bitta yozuvga birlashtiradi — ikkalasini ham alohida saqlab, Muharrirni
+     * ikki marta bir xil ishni ko'rishga majburlamaslik uchun. Bu HECH QANDAY
+     * katalog yozuvi yaratmaydi, faqat kutish jadvalining o'zini tozalaydi.
      *
-     * @return array{auto_created: int, still_pending: int}
+     * @return array{merged: int}
      */
-    public function reprocessPendingCandidates(): array
+    public function deduplicatePendingCandidates(): array
     {
-        $pending = UnmatchedBrandModelCandidate::where('status', 'pending')->with('source')->get();
-
-        $autoCreated = 0;
-        $stillPending = 0;
+        $pending = UnmatchedBrandModelCandidate::where('status', 'pending')->get();
+        $seen = array();
+        $mergedCount = 0;
 
         foreach ($pending as $candidate) {
-            $source = $candidate->source;
+            $key = $candidate->source_id . '|'
+                . $this->normalizeForMatching($candidate->brand_name_raw) . '|'
+                . $this->normalizeForMatching($candidate->model_name_raw);
 
-            if ($source === null) {
-                $stillPending++;
-
-                continue;
-            }
-
-            $entry = array(
-                'brand_name' => $candidate->brand_name_raw,
-                'model_name' => $candidate->model_name_raw,
-                'url' => $candidate->discovered_url,
-            );
-
-            $brandId = $this->aliasService->resolve(EntityType::Brand, $entry['brand_name'], $source->id);
-            $autoResult = $this->tryAutoCreate($source, $entry, $brandId);
-
-            if ($autoResult !== null) {
-                $this->activateParserTarget($source, $autoResult['brand_id'], $autoResult['model_id'], $entry['url']);
-                $candidate->update(array('status' => 'resolved'));
-                $autoCreated++;
+            if (isset($seen[$key])) {
+                // Bu allaqachon ko'rilgan (vizual duplikat) — takroriy qatorni
+                // o'chiramiz, faqat birinchisini qoldiramiz.
+                $candidate->delete();
+                $mergedCount++;
 
                 continue;
             }
 
-            $stillPending++;
+            $seen[$key] = true;
         }
 
-        return array('auto_created' => $autoCreated, 'still_pending' => $stillPending);
+        return array('merged' => $mergedCount);
     }
 
-    /**
-     * @return array{brand_id: int, model_id: int}|null
-     */
-    private function tryAutoCreate(Source $source, array $entry, ?int $existingBrandId): ?array
+    private function upsertPendingCandidate(Source $source, array $entry): void
     {
-        $brandId = $existingBrandId;
+        // updateOrCreate() ishlatilmaydi — chunki u first_seen_at'ni
+        // qayta-qayta yozib qo'yishi (yoki umuman to'ldirmasligi) mumkin edi.
+        // Yozuv birinchi marta yaratilganda first_seen_at hozirgi vaqt bilan
+        // to'ldiriladi va keyin hech qachon o'zgartirilmaydi; last_seen_at
+        // esa har safar yangilanadi.
+        $candidate = UnmatchedBrandModelCandidate::firstOrNew(array(
+            'source_id' => $source->id,
+            'brand_name_raw' => $entry['brand_name'],
+            'model_name_raw' => $entry['model_name'],
+        ));
 
-        if ($brandId === null) {
-            $brandId = $this->tryAutoCreateBrand($source, $entry['brand_name']);
-
-            if ($brandId === null) {
-                return null;
-            }
+        if (! $candidate->exists) {
+            $candidate->first_seen_at = now();
         }
 
-        if ($this->looksLikeJunkName($entry['model_name'])) {
-            return null;
-        }
-
-        $existingSimilar = $this->findSimilarModel($brandId, $entry['model_name']);
-
-        if ($existingSimilar !== null) {
-            $modelAlias = $this->aliasService->createPendingAlias(
-                EntityType::Model,
-                $existingSimilar->id,
-                $entry['model_name'],
-                $source->id,
-            );
-            $this->aliasService->verify($modelAlias);
-
-            return array('brand_id' => $brandId, 'model_id' => $existingSimilar->id);
-        }
-
-        try {
-            $carModel = CarModel::create(array(
-                'brand_id' => $brandId,
-                'name' => trim($entry['model_name']),
-                'slug' => Str::slug($entry['model_name']) ?: Str::slug($entry['brand_name'] . '-' . $entry['model_name']),
-                'is_active' => true,
-            ));
-        } catch (QueryException $e) {
-            // Slug to'qnashuvi yoki boshqa DB cheklovi — xavfsizroq tomonga,
-            // qo'lda ko'rib chiqish uchun qoldiramiz.
-            return null;
-        }
-
-        $modelAlias = $this->aliasService->createPendingAlias(
-            EntityType::Model,
-            $carModel->id,
-            $entry['model_name'],
-            $source->id,
-        );
-        $this->aliasService->verify($modelAlias);
-
-        return array('brand_id' => $brandId, 'model_id' => $carModel->id);
-    }
-
-    /**
-     * Yangi brand'ni FAQAT u allaqachon "discovered_brands"da (ya'ni bizning
-     * sifat filtridan — q- prefiks, viloyat nomlari va h.k. — o'tgan haqiqiy
-     * OLX marka ro'yxatida) mavjud bo'lsagina avtomatik yaratamiz.
-     */
-    private function tryAutoCreateBrand(Source $source, string $brandNameRaw): ?int
-    {
-        if ($this->looksLikeJunkName($brandNameRaw)) {
-            return null;
-        }
-
-        $discoveredBrand = $this->findDiscoveredBrandByName($source->id, $brandNameRaw);
-
-        if ($discoveredBrand === null) {
-            // Kashfiyot bosqichidan o'tmagan — bu qayerdandir boshqa yo'l
-            // bilan kelgan, ehtiyot bo'lib qo'lda ko'rib chiqamiz.
-            return null;
-        }
-
-        $brand = Brand::firstOrCreate(
-            array('slug' => $discoveredBrand->slug),
-            array('name' => $discoveredBrand->name, 'is_active' => true)
-        );
-
-        $brandAlias = $this->aliasService->createPendingAlias(
-            EntityType::Brand,
-            $brand->id,
-            $brandNameRaw,
-            $source->id,
-        );
-        $this->aliasService->verify($brandAlias);
-
-        return $brand->id;
-    }
-
-    /**
-     * DB darajasidagi LOWER() ga tayanmaydi — SQLite'ning standart LOWER()
-     * funksiyasi faqat ASCII harflarni kichiklashtiradi, kirillcha nomlar
-     * uchun ishlamaydi (masalan "УАЗ" o'zgarmay qoladi). Shuning uchun
-     * solishtirishni PHP tarafida, mb_strtolower() bilan qilamiz — bu
-     * SQLite'da ham, PostgreSQL'da ham bir xil, to'g'ri natija beradi.
-     * Bitta source'dagi discovered_brands soni katta emas (bir necha yuzta),
-     * shuning uchun xotirada solishtirish arzon.
-     */
-    private function findDiscoveredBrandByName(int $sourceId, string $brandNameRaw): ?DiscoveredBrand
-    {
-        $target = mb_strtolower(trim($brandNameRaw));
-
-        return DiscoveredBrand::where('source_id', $sourceId)
-            ->get()
-            ->first(fn (DiscoveredBrand $discovered) => mb_strtolower(trim($discovered->name)) === $target);
-    }
-
-    /**
-     * Kirill/lotin vizual duplikatlarini (masalan "A5" va "А5") bitta model
-     * sifatida topish — shu brand ichida.
-     */
-    private function findSimilarModel(int $brandId, string $rawModelName): ?CarModel
-    {
-        $target = $this->normalizeForMatching($rawModelName);
-
-        return CarModel::where('brand_id', $brandId)
-            ->get()
-            ->first(fn (CarModel $model) => $this->normalizeForMatching($model->name) === $target);
+        $candidate->discovered_url = $entry['url'];
+        $candidate->status = 'pending';
+        $candidate->last_seen_at = now();
+        $candidate->save();
     }
 
     private function normalizeForMatching(string $name): string
@@ -269,10 +149,6 @@ class ParserTargetDiscoveryService
             return true;
         }
 
-        // Kamida bitta harf YOKI raqam bo'lishi kerak — UAZ/VAZ/GAZ kabi
-        // markalarda sof raqamli model nomlari (masalan "31512-010") ham
-        // haqiqiy va keng tarqalgan, shuning uchun faqat harfni talab
-        // qilish bunday holatlarni noto'g'ri rad etardi.
         if (! preg_match('/[\p{L}\p{N}]/u', $trimmed)) {
             return true;
         }
