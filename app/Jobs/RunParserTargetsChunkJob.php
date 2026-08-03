@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\DTO\ListingData;
+use App\Exceptions\SuspiciousListingRejectedException;
+use App\Models\ParserRejectionLog;
 use App\Models\ParserTarget;
 use App\Models\Source;
 use App\Services\MarketListings\ListingIngestionService;
@@ -127,6 +129,18 @@ class RunParserTargetsChunkJob implements ShouldQueue
                 if ($result['item'] === null) {
                     $rejectedCount++;
 
+                    if ($result['rejected_reason'] === 'olx_fallback_result') {
+                        ParserRejectionLog::create(array(
+                            'source_id' => $target->source_id,
+                            'brand_raw' => $target->brand->name,
+                            'model_raw' => $target->carModel->name,
+                            'code' => 'olx_fallback_result',
+                            'message' => "OLX'ning \"hech narsa topilmadi, o'xshashlarini ko'ring\" fallback "
+                                . "natijasi — parser darajasida rad etildi (target: {$target->brand->name} {$target->carModel->name}).",
+                            'rejected_at' => now(),
+                        ));
+                    }
+
                     continue;
                 }
 
@@ -135,6 +149,21 @@ class RunParserTargetsChunkJob implements ShouldQueue
                     $ingestionService->ingest($dto);
                     $seenExternalIds[] = $result['item']['external_id'];
                     $ingestedCount++;
+                } catch (SuspiciousListingRejectedException $e) {
+                    ParserRejectionLog::create(array(
+                        'source_id' => $result['item']['source_id'] ?? null,
+                        'external_id' => $result['item']['external_id'] ?? null,
+                        'canonical_url' => $result['item']['canonical_url'] ?? null,
+                        'brand_raw' => $result['item']['brand_raw'] ?? null,
+                        'model_raw' => $result['item']['model_raw'] ?? null,
+                        'price_amount' => $result['item']['price_amount'] ?? null,
+                        'currency' => $result['item']['currency'] ?? null,
+                        'code' => $e->code,
+                        'message' => $e->getMessage(),
+                        'rejected_at' => now(),
+                    ));
+
+                    $rejectedCount++;
                 } catch (\Throwable $e) {
                     Log::warning('RunParserTargetsChunkJob: ingest xatosi — ' . $e->getMessage());
                     $rejectedCount++;

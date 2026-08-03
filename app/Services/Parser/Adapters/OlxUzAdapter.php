@@ -225,6 +225,20 @@ class OlxUzAdapter
             return array('item' => null, 'rejected_reason' => 'missing_url');
         }
 
+        // OLX'ning "hech narsa topilmadi, o'xshashlarini ko'ring" fallback
+        // mexanizmi: qidiruv/model bo'yicha e'lon kam yoki yo'q bo'lsa, OLX
+        // sahifada UMUMAN BOSHQA (mos kelmaydigan — soat, uy va h.k.)
+        // e'lonlarni ko'rsatadi. Bunday kartochkaning havolasida shu belgi
+        // bo'ladi. Bu holatni eng erta bosqichda — hali brand/model
+        // ID'lariga bog'lanmasdan turib — rad etamiz, chunki bu haqiqiy
+        // moslik emas (ListingIngestionService'dagi himoya qatlami ham shu
+        // qoidani takrorlaydi — ikkalasi ham kerak: bu yerda tezroq va
+        // arzonroq to'xtatish uchun, u yerda esa boshqa yo'llardan
+        // (masalan HTTP ingestion API) kelgan ma'lumot uchun).
+        if (str_contains($canonicalUrl, 'reason=extended_search')) {
+            return array('item' => null, 'rejected_reason' => 'olx_fallback_result');
+        }
+
         $locationNode = $card->filter(self::LOCATION_SELECTOR);
         $locationText = $locationNode->count() > 0 ? trim($locationNode->text()) : null;
         $region = $this->extractRegion($locationText);

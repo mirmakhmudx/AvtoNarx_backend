@@ -4,6 +4,7 @@ namespace App\Services\MarketListings;
 
 use App\DTO\ListingData;
 use App\Enums\EntityType;
+use App\Exceptions\SuspiciousListingRejectedException;
 use App\Models\ListingPriceSnapshot;
 use App\Models\MarketListing;
 use App\Services\Catalog\CatalogAliasService;
@@ -20,6 +21,7 @@ class ListingIngestionService
     public function __construct(
         private readonly CatalogAliasService $aliasService,
         private readonly ExchangeRateService $exchangeRateService,
+        private readonly ListingSanityChecker $sanityChecker,
     ) {
     }
 
@@ -58,6 +60,19 @@ class ListingIngestionService
         $normalizationStatus = ($brandId && $modelId) ? 'matched' : 'pending';
 
         $priceUzs = $this->exchangeRateService->convertToUzs($data->priceAmount, $data->currency);
+
+        // Himoya qatlami (TZ: "aniq bo'lmasa, olinmasin"): bu yerga qaysi yo'l
+        // orqali kelishidan qat'i nazar (ichki scraper yoki tashqi HTTP
+        // ingestion API) — OLX fallback natijalari yoki mashina uchun aqlga
+        // sig'maydigan narxdagi elementlar bazaga UMUMAN yozilmaydi.
+        // priceUzs hisoblab bo'lmagan holatda (masalan kurs topilmadi) narx
+        // tekshiruvi o'tkazib yuboriladi — bu boshqa (currency) xatosi sifatida
+        // yuqorida allaqachon ko'rib chiqiladi.
+        $suspiciousReason = $this->sanityChecker->check($data->canonicalUrl, $priceUzs);
+
+        if ($suspiciousReason !== null) {
+            throw new SuspiciousListingRejectedException($suspiciousReason['code'], $suspiciousReason['message']);
+        }
 
         $attributes = array(
             'canonical_url' => $data->canonicalUrl,

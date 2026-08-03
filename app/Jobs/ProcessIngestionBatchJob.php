@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\DTO\ListingData;
+use App\Exceptions\SuspiciousListingRejectedException;
 use App\Models\IngestionBatch;
 use App\Models\IngestionItemError;
 use App\Services\MarketListings\ListingIngestionService;
@@ -58,6 +59,17 @@ class ProcessIngestionBatchJob implements ShouldQueue
 
                 $ingestionService->ingest($dto);
                 $accepted++;
+            } catch (SuspiciousListingRejectedException $e) {
+                $rejected++;
+
+                IngestionItemError::create(array(
+                    'batch_id' => $batch->id,
+                    'item_index' => $index,
+                    'external_id' => $item['external_id'] ?? null,
+                    'code' => $e->code,
+                    'field' => null,
+                    'message' => $e->getMessage(),
+                ));
             } catch (\Throwable $e) {
                 $rejected++;
 
