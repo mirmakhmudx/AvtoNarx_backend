@@ -27,10 +27,14 @@ class RunParserSourceJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     // Pagination qo'shilgandan keyin (OlxUzAdapter::MAX_PAGES_PER_TARGET=10)
-    // bitta target eng yomon holatda ~35-40s olishi mumkin (avval ~5s edi).
-    // Shuning uchun partiya hajmini kamaytirdik — 100 emas, 40 — RunParserTargetsChunkJob
-    // timeout'iga (1800s) sig'ishi uchun xavfsizlik zaxirasi bilan.
-    private const CHUNK_SIZE = 40;
+    // bitta target eng yomon holatda ~35-40s olishi mumkin. 2026-08-04:
+    // 40'da ham ikkita ishga tushirish RunParserTargetsChunkJob'ning o'z
+    // timeout'iga (o'shanda 1800s) tiqilib FAIL bo'lgani uchun, partiya
+    // hajmi 40'dan 20'ga kamaytirildi (qo'shimcha xavfsizlik zaxirasi) —
+    // chunk job timeout'i ham parallel ravishda 3300s'gacha oshirildi
+    // (RunParserTargetsChunkJob'ga qarang). Bu chunk sonini ikki baravar
+    // oshiradi, lekin har bir chunk ancha yengilroq va ishonchliroq bo'ladi.
+    private const CHUNK_SIZE = 20;
 
     public int $tries = 1;
     public int $timeout = 120;

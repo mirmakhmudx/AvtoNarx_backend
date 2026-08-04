@@ -11,8 +11,17 @@ use App\Jobs\DiscoverOlxBrandsJob;
 use App\Jobs\DiscoverOlxModelsJob;
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::job(new DiscoverOlxBrandsJob())->dailyAt('22:30');
-Schedule::job(new DiscoverOlxModelsJob())->weeklyOn(1, '23:00'); // har dushanba
+// 2026-08-04: model discovery haftalik emas, HAR KUNI ishlaydi — yangi
+// model/markalar bir haftagacha kutmasdan, keyingi kunning skanerlashiga
+// kirsin. Ketma-ketlik muhim: marka → model → asosiy skanerlash, shuning
+// uchun har biri navbatga oldingisidan keyin qo'yiladi (default queue'da
+// FIFO tartibda ishlanadi). Model discovery uzoq davom etishi mumkin
+// (timeout 3600s) — shuning uchun asosiy skanerlashgacha ~1s45d bufer
+// qoldirildi; agar u vaqt ichida ulgurmasa ham, RunParserSourceJob
+// mavjud (allaqachon tasdiqlangan) targetlar bilan baribir ishlayveradi,
+// yangi topilgan target'lar keyingi kunga qoladi.
+Schedule::job(new DiscoverOlxBrandsJob())->dailyAt('21:00');
+Schedule::job(new DiscoverOlxModelsJob())->dailyAt('21:15');
 
 use App\Jobs\RecalculateStatisticsJob;
 use App\Jobs\RunParserSourceJob;
