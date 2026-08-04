@@ -148,12 +148,14 @@ class ParserTargetResource extends Resource
                     ->badge()
                     ->color(fn (?string $state): string => match ($state) {
                         'success' => 'success',
+                        'partial' => 'warning',
                         'error' => 'danger',
                         'blocked' => 'warning',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'success' => 'Muvaffaqiyatli',
+                        'partial' => 'Qisman (sahifa xatosi)',
                         'error' => 'Xato',
                         'blocked' => 'Bloklangan',
                         default => 'Hali ishlamagan',
@@ -181,6 +183,7 @@ class ParserTargetResource extends Resource
                     ->label('Oxirgi holat')
                     ->options([
                         'success' => 'Muvaffaqiyatli',
+                        'partial' => 'Qisman (sahifa xatosi)',
                         'error' => 'Xato',
                         'blocked' => 'Bloklangan',
                     ]),

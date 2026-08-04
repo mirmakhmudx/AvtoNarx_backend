@@ -72,6 +72,7 @@ class ParserRejectionLogResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match (true) {
                         str_contains($state, 'olx_fallback_result') => 'warning',
+                        str_contains($state, 'title_model_mismatch') => 'warning',
                         str_contains($state, 'implausible_price') => 'danger',
                         default => 'gray',
                     }),

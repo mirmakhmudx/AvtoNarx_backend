@@ -86,7 +86,7 @@ class RunParserTargetsChunkJob implements ShouldQueue
 
         foreach ($targets as $target) {
             try {
-                $results = $adapter->extractFromTarget($target);
+                $extraction = $adapter->extractFromTarget($target);
             } catch (SourceBlockedException $e) {
                 Log::warning("RunParserTargetsChunkJob: {$target->brand->name} {$target->carModel->name} — manba bloklandi: " . $e->getMessage());
 
@@ -121,6 +121,8 @@ class RunParserTargetsChunkJob implements ShouldQueue
                 continue;
             }
 
+            $results = $extraction['results'];
+
             $ingestedCount = 0;
             $rejectedCount = 0;
             $seenExternalIds = array();
@@ -137,6 +139,18 @@ class RunParserTargetsChunkJob implements ShouldQueue
                             'code' => 'olx_fallback_result',
                             'message' => "OLX'ning \"hech narsa topilmadi, o'xshashlarini ko'ring\" fallback "
                                 . "natijasi — parser darajasida rad etildi (target: {$target->brand->name} {$target->carModel->name}).",
+                            'rejected_at' => now(),
+                        ));
+                    }
+
+                    if ($result['rejected_reason'] === 'title_model_mismatch') {
+                        ParserRejectionLog::create(array(
+                            'source_id' => $target->source_id,
+                            'brand_raw' => $target->brand->name,
+                            'model_raw' => $target->carModel->name,
+                            'code' => 'title_model_mismatch',
+                            'message' => "Kartochka sarlavhasida kutilgan model nomi topilmadi — OLX belgisiz "
+                                . "boshqa model ko'rsatdi (target: {$target->brand->name} {$target->carModel->name}).",
                             'rejected_at' => now(),
                         ));
                     }
@@ -173,16 +187,34 @@ class RunParserTargetsChunkJob implements ShouldQueue
             // TZ bo'lim 12 ("Snapshot"): target (brend+model sahifasi) TO'LIQ
             // va muvaffaqiyatli qayta ko'rib chiqilgani uchun — shu sahifada
             // ko'rilmagan, lekin bazada "active" turgan boshqa e'lonlarning
-            // missing_runs sonini oshiramiz. Faqat shu yerda (exception'siz
-            // muvaffaqiyat yo'lida) chaqiriladi — xato/bloklangan holatlarda
-            // hech narsa deaktivatsiya qilinmaydi.
-            $ingestionService->markMissingForModel($target->source_id, $target->model_id, $seenExternalIds);
+            // missing_runs sonini oshiramiz. Faqat pagination TO'LIQ tugagan
+            // holatda chaqiriladi ($extraction['complete'] === true) —
+            // agar biror sahifada vaqtinchalik xato tufayli erta to'xtagan
+            // bo'lsa, keyingi (ko'rilmagan) sahifalardagi FAOL e'lonlar
+            // noto'g'ri "yo'qolgan" deb belgilanib qolmasligi kerak. Topilgan
+            // e'lonlarning o'zi baribir yuqorida ingest qilingan — faqat
+            // "yo'qolgan" belgilash shu safar o'tkazib yuborilgan, xolos.
+            if ($extraction['complete']) {
+                $ingestionService->markMissingForModel($target->source_id, $target->model_id, $seenExternalIds);
 
-            $target->update(array(
-                'last_run_at' => now(),
-                'last_status' => 'success',
-                'last_error' => null,
-            ));
+                $target->update(array(
+                    'last_run_at' => now(),
+                    'last_status' => 'success',
+                    'last_error' => null,
+                ));
+            } else {
+                Log::warning(
+                    "RunParserTargetsChunkJob: {$target->brand->name} {$target->carModel->name} — "
+                    . "qisman yakunlandi ({$ingestedCount} e'lon saqlandi, keyingi sahifalar o'qilmadi): "
+                    . $extraction['error']
+                );
+
+                $target->update(array(
+                    'last_run_at' => now(),
+                    'last_status' => 'partial',
+                    'last_error' => $extraction['error'],
+                ));
+            }
 
             $totalIngested += $ingestedCount;
             $totalRejected += $rejectedCount;

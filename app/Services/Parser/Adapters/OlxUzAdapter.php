@@ -6,7 +6,9 @@ use App\Models\ParserTarget;
 use App\Services\Parser\Exceptions\SourceBlockedException;
 use App\Services\Parser\Extraction\ContentHashBuilder;
 use App\Services\Parser\Extraction\MoneyExtractor;
+use App\Services\Parser\Extraction\TitleModelMatcher;
 use App\Services\Parser\Extraction\YearExtractor;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\DomCrawler\Crawler;
 
@@ -34,30 +36,68 @@ class OlxUzAdapter
     // targetlar orasidagi 3s kutishdan tashqari, qo'shimcha).
     private const PAGE_REQUEST_DELAY_SECONDS = 2;
 
+    // Chuqur sahifalarda (masalan page=4, page=7) OLX ba'zan sekinlashib,
+    // 15s'dan ortiq javob bermaydi (loglarda cURL 28 / HTTP 504 ko'rindi).
+    // Shuning uchun timeout 15s'dan 20s'ga oshirildi va har bir sahifa
+    // uchun 1 marta qayta urinish qo'shildi (jami 2 urinish) — bu ko'p
+    // hollarda vaqtinchalik sekinlikni "chidab" o'tkazib yuboradi.
+    private const HTTP_TIMEOUT_SECONDS = 20;
+    private const MAX_ATTEMPTS_PER_PAGE = 2;
+    private const RETRY_DELAY_SECONDS = 3;
+
     public function __construct(
         private readonly MoneyExtractor $moneyExtractor,
         private readonly YearExtractor $yearExtractor,
         private readonly ContentHashBuilder $contentHashBuilder,
+        private readonly TitleModelMatcher $titleModelMatcher,
     ) {
     }
 
     /**
      * Bitta target (brend+model sahifasi)ning BARCHA sahifalarini ketma-ket
      * ko'rib chiqadi (page=1, page=2, ...), sahifa bo'sh kelguncha yoki
-     * MAX_PAGES_PER_TARGET'ga yetguncha. Agar biror sahifada vaqtinchalik
-     * xato (masalan HTTP 500) yoki bloklash chiqsa — target BUTUNLAY
-     * muvaffaqiyatsiz deb hisoblanadi (hozirgacha yig'ilgan natijalar ham
-     * tashlab yuboriladi), chunki chala natija bilan
-     * ListingIngestionService::markMissingForModel chaqirilsa hali
-     * ko'rilmagan keyingi sahifalardagi FAOL e'lonlar noto'g'ri "yo'qolgan"
-     * deb belgilanib qolishi mumkin edi.
+     * MAX_PAGES_PER_TARGET'ga yetguncha.
+     *
+     * Ikki xil xato bir xil emas:
+     *  - Bloklash (403/429/CAPTCHA) — bu butun MANBA darajasidagi muammo,
+     *    SourceBlockedException yuqoriga otiladi, chunk job uni alohida
+     *    ushlab manbani "tinch turish" rejimiga o'tkazadi.
+     *  - Vaqtinchalik sahifa xatosi (timeout, 5xx) — bu FAQAT shu sahifaga
+     *    tegishli. Bunday holatda pagination to'xtatiladi, LEKIN hozirgacha
+     *    muvaffaqiyatli yig'ilgan natijalar (masalan 6 sahifa o'qilib,
+     *    7-sahifada timeout bo'lsa — o'sha 6 sahifa) TASHLAB YUBORILMAYDI,
+     *    chunki ular haqiqiy va bazaga yozishga arziydi. Faqat qaytariladigan
+     *    natijada 'complete' => false belgilanadi — bu chaqiruvchiga
+     *    (RunParserTargetsChunkJob) ListingIngestionService::markMissingForModel
+     *    metodini CHAQIRMASLIK kerakligini bildiradi, chunki keyingi
+     *    (ko'rilmagan) sahifalardagi FAOL e'lonlar noto'g'ri "yo'qolgan" deb
+     *    belgilanib qolmasligi kerak.
+     *
+     * @return array{results: array<int, array{item: array|null, rejected_reason: string|null}>, complete: bool, error: string|null}
      */
     public function extractFromTarget(ParserTarget $target): array
     {
         $allResults = array();
 
         for ($page = 1; $page <= self::MAX_PAGES_PER_TARGET; $page++) {
-            $pageResults = $this->fetchPage($target, $page);
+            try {
+                $pageResults = $this->fetchPage($target, $page);
+            } catch (SourceBlockedException $e) {
+                // SourceBlockedException \RuntimeException'dan meros oladi,
+                // shuning uchun bu catch pastdagi umumiy \RuntimeException
+                // blokidan OLDIN turishi SHART — aks holda bloklash ham
+                // "vaqtinchalik xato" deb noto'g'ri yutilib, manba hali
+                // bloklangan holatda qayta-qayta so'rov yuborilaveradi.
+                // Bu holat butun manba darajasida, shuning uchun yuqoriga
+                // (chunk job'ga) o'zgarishsiz otiladi.
+                throw $e;
+            } catch (\RuntimeException $e) {
+                return array(
+                    'results' => $allResults,
+                    'complete' => false,
+                    'error' => $e->getMessage(),
+                );
+            }
 
             if ($pageResults === null) {
                 // Sahifada e'lon topilmadi — oxirgi sahifaga yetdik, bu
@@ -72,7 +112,7 @@ class OlxUzAdapter
             }
         }
 
-        return $allResults;
+        return array('results' => $allResults, 'complete' => true, 'error' => null);
     }
 
     /**
@@ -83,23 +123,7 @@ class OlxUzAdapter
     {
         $url = $this->buildPageUrl($target->target_url, $page);
 
-        $response = Http::withHeaders(array(
-            'User-Agent' => self::USER_AGENT,
-        ))->timeout(15)->get($url);
-
-        if ($response->status() === 403 || $response->status() === 429) {
-            throw new SourceBlockedException('Manba bloklandi (HTTP ' . $response->status() . '). To\'xtatildi.');
-        }
-
-        if (! $response->successful()) {
-            // Oddiy xato (404, 500, timeout va h.k.) — bloklash emas, lekin
-            // shu target uchun to'liq muvaffaqiyatsizlik hisoblanadi (yuqoridagi
-            // izohga qarang).
-            throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP " . $response->status() . ').');
-        }
-
-        $html = $response->body();
-        unset($response);
+        $html = $this->fetchHtmlWithRetry($url, $page);
 
         // Kartochkalar yo'q bo'lsa VA sahifa "haqiqatan bloklangan sahifa"ga
         // o'xshasa (juda qisqa HTML + captcha/robot so'zlari) — to'xtaymiz.
@@ -142,6 +166,64 @@ class OlxUzAdapter
         gc_collect_cycles();
 
         return $results;
+    }
+
+    /**
+     * HTTP so'rovini yuboradi va HTML matnini qaytaradi. Tarmoq xatosi
+     * (timeout, ulanish uzilishi) yoki 5xx server xatosi kelsa —
+     * RETRY_DELAY_SECONDS kutib, MAX_ATTEMPTS_PER_PAGE marta urinib
+     * ko'radi (jami, faqat oxirgi marta muvaffaqiyatsiz bo'lsa xato
+     * otiladi). 403/429 esa qayta urinilmasdan darhol bloklash sifatida
+     * ko'tariladi — bunday holatda qayta urinish foydasiz, chunki manba
+     * ataylab rad etayapti.
+     */
+    private function fetchHtmlWithRetry(string $url, int $page): string
+    {
+        for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS_PER_PAGE; $attempt++) {
+            $isLastAttempt = $attempt === self::MAX_ATTEMPTS_PER_PAGE;
+
+            try {
+                $response = Http::withHeaders(array(
+                    'User-Agent' => self::USER_AGENT,
+                ))->timeout(self::HTTP_TIMEOUT_SECONDS)->get($url);
+            } catch (ConnectionException $e) {
+                if ($isLastAttempt) {
+                    throw new \RuntimeException(
+                        "Sahifa {$page} yuklanmadi (tarmoq xatosi, {$attempt} urinishdan keyin): " . $e->getMessage()
+                    );
+                }
+
+                sleep(self::RETRY_DELAY_SECONDS);
+
+                continue;
+            }
+
+            if ($response->status() === 403 || $response->status() === 429) {
+                throw new SourceBlockedException('Manba bloklandi (HTTP ' . $response->status() . '). To\'xtatildi.');
+            }
+
+            if ($response->serverError()) {
+                if ($isLastAttempt) {
+                    throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP " . $response->status() . ", {$attempt} urinishdan keyin).");
+                }
+
+                sleep(self::RETRY_DELAY_SECONDS);
+
+                continue;
+            }
+
+            if (! $response->successful()) {
+                // 4xx (403/429'dan boshqa) — qayta urinishga arzimaydi,
+                // manba tomonidan aniq rad etilgan (masalan 404).
+                throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP " . $response->status() . ').');
+            }
+
+            return $response->body();
+        }
+
+        // Bu qatorga yetib kelmasligi kerak (yuqoridagi loop har doim
+        // return yoki throw bilan tugaydi), lekin statik analiz uchun.
+        throw new \RuntimeException("Sahifa {$page} yuklanmadi (noma'lum xato).");
     }
 
     /**
@@ -245,6 +327,17 @@ class OlxUzAdapter
 
         $titleNode = $card->filter(self::TITLE_SELECTOR);
         $titleText = $titleNode->count() > 0 ? trim($titleNode->text()) : '';
+
+        // Skrinshotda ko'rilgan haqiqiy bag: OLX ba'zan reason=extended_search
+        // belgisisiz ham target sahifasida BOSHQA modelni ko'rsatadi (masalan
+        // "Daewoo Tacuma" sahifasida "Daewoo Matiz" e'loni chiqadi). Yuqoridagi
+        // URL-marker tekshiruvi buni ushlamaydi, chunki bunday hollarda OLX
+        // hech qanday belgi qo'ymaydi. Shuning uchun kartochka sarlavhasini
+        // kutilayotgan model nomi bilan mustaqil ravishda solishtiramiz —
+        // bu ikkinchi, ko'proq umumiy himoya qatlami.
+        if (! $this->titleModelMatcher->matches($titleText, $target->carModel->name)) {
+            return array('item' => null, 'rejected_reason' => 'title_model_mismatch');
+        }
 
         $year = $this->yearExtractor->extract($titleText) ?? $this->yearExtractor->extract($card->text());
 
