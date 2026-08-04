@@ -33,15 +33,22 @@ class OlxUzAdapter
 
     // Bitta target ichida sahifalar orasidagi qo'shimcha kutish — OLX'ga
     // haddan tashqari tez-tez so'rov yubormaslik uchun (chunk job'dagi
-    // targetlar orasidagi 3s kutishdan tashqari, qo'shimcha).
-    private const PAGE_REQUEST_DELAY_SECONDS = 2;
+    // targetlar orasidagi kutishdan tashqari, qo'shimcha). 2s→1s: umumiy
+    // partiya vaqtini qisqartirish uchun (pastdagi HTTP_TIMEOUT bilan
+    // birga muvozanatlangan — 2026-08-04 tuzatish, quyidagi izohga
+    // qarang).
+    private const PAGE_REQUEST_DELAY_SECONDS = 1;
 
-    // Chuqur sahifalarda (masalan page=4, page=7) OLX ba'zan sekinlashib,
-    // 15s'dan ortiq javob bermaydi (loglarda cURL 28 / HTTP 504 ko'rindi).
-    // Shuning uchun timeout 15s'dan 20s'ga oshirildi va har bir sahifa
-    // uchun 1 marta qayta urinish qo'shildi (jami 2 urinish) — bu ko'p
-    // hollarda vaqtinchalik sekinlikni "chidab" o'tkazib yuboradi.
-    private const HTTP_TIMEOUT_SECONDS = 20;
+    // 2026-08-03/04 tuzatish: timeout 15s→20s oshirilgan edi (chuqur
+    // sahifalarda vaqtinchalik sekinlikka bardosh berish uchun), lekin bu
+    // HAR BIR (hatto muvaffaqiyatli) so'rovning eng ko'p cho'zilish
+    // imkoniyatini oshirib, bitta partiyaning umumiy vaqtini
+    // RunParserTargetsChunkJob'ning o'z timeout'iga (o'shanda 1800s)
+    // tiqilib qoldirdi — ikkita ishga tushirish ketma-ket FAIL bo'ldi.
+    // Asl 15s'ga qaytarildi; himoya sifatida faqat qayta urinish
+    // (MAX_ATTEMPTS_PER_PAGE=2) qoldirildi — bu yetarli, chunki muammo
+    // vaqti-vaqti bilan sekinlashish edi, doimiy emas.
+    private const HTTP_TIMEOUT_SECONDS = 15;
     private const MAX_ATTEMPTS_PER_PAGE = 2;
     private const RETRY_DELAY_SECONDS = 3;
 

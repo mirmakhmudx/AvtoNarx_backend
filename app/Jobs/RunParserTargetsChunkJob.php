@@ -30,16 +30,25 @@ class RunParserTargetsChunkJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private const REQUEST_DELAY_SECONDS = 3;
+    // 2026-08-04: 3s→1s — OLX'ga yuboriladigan so'rovlar tezligini
+    // oshirish uchun (adapter darajasidagi PAGE_REQUEST_DELAY_SECONDS ham
+    // 1s'ga tushirildi). Bloklanish xavfi kuzatiladi — agar
+    // SourceBlockedException ko'payib ketsa, bu qiymat qaytadan oshirilishi
+    // kerak bo'ladi.
+    private const REQUEST_DELAY_SECONDS = 1;
 
     public int $tries = 1;
 
-    // Pagination bilan bitta target eng yomon holatda ~10 sahifa x
-    // (2s so'rov + 2s kutish) + 3s target-orasi kutish = ~43s bo'lishi
-    // mumkin (aslida ko'pchilik model 1 sahifada tugaydi, bu faqat
-    // xavfsizlik chegarasi). 40 ta target x 43s = ~1720s. Shuning uchun
-    // 1800s (30 daqiqa) — kichik zaxira bilan.
-    public int $timeout = 1800;
+    // docker-compose.yml'dagi navbat worker'i --timeout=3600 (1 soat)
+    // bilan ishlaydi — chunk job timeout'i shundan PASTROQ bo'lishi
+    // SHART, aks holda worker chunk'ni "muddati tugagan" deb hisoblab,
+    // hech qanday belgi qoldirmasdan majburan o'ldiradi (2026-08-03/04'da
+    // aynan shu sabab bilan ikkita ishga tushirish FAIL bo'lgan — o'shanda
+    // 1800s edi va HTTP timeout oshirilgani tufayli yetarli emas edi).
+    // Endi CHUNK_SIZE 20'ga tushirilgani va HTTP/sahifa kutishlari qisqar-
+    // tirilgani bilan birga, 3300s (55 daqiqa) worker chegarasidan xavfsiz
+    // zaxira bilan pastroq turadi.
+    public int $timeout = 3300;
 
     /**
      * @param  array<int, int>  $targetIds

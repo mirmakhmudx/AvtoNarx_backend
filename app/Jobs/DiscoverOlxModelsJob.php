@@ -17,7 +17,9 @@ class DiscoverOlxModelsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private const REQUEST_DELAY_SECONDS = 4;
+    // 2026-08-04: 4s→1s, boshqa parser so'rovlari bilan bir xil tezlikka
+    // moslandi.
+    private const REQUEST_DELAY_SECONDS = 1;
 
     public int $tries = 1;
     public int $timeout = 3600; // 1 soat — 100+ so'rov uchun yetarli vaqt
