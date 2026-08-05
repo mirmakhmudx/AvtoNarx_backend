@@ -20,6 +20,11 @@ class MarketStatisticsService
 
     public function recalculateAll(): int
     {
+        $updated = 0;
+
+        // 1) Butun O'zbekiston bo'yicha (region_code = null) — avvalgidek,
+        // eng keng ko'rinish, har doim mavjud bo'lishi kerak (agar namuna
+        // yetarli bo'lsa).
         $groups = MarketListing::query()
             ->active()
             ->matched()
@@ -27,11 +32,30 @@ class MarketStatisticsService
             ->groupBy('brand_id', 'model_id', 'year')
             ->get();
 
-        $updated = 0;
-
         foreach ($groups as $group) {
-            $this->recalculateGroup($group->brand_id, $group->model_id, $group->year);
-            $updated = $updated + 1;
+            $this->recalculateGroup($group->brand_id, $group->model_id, $group->year, null);
+            $updated++;
+        }
+
+        // 2) Har bir hudud bo'yicha ALOHIDA — foydalanuvchi aynan qaysi
+        // hududda narx qanday ekanini bilishi uchun. Faqat 'region'
+        // maydoni to'ldirilgan e'lonlar hisobga olinadi (parser undan
+        // OLX'ning "joylashuv" qatoridan oladi).
+        $regionGroups = MarketListing::query()
+            ->active()
+            ->matched()
+            ->whereNotNull('region')
+            ->where('region', '!=', '')
+            ->select('brand_id', 'model_id', 'year', 'region')
+            ->groupBy('brand_id', 'model_id', 'year', 'region')
+            ->get();
+
+        foreach ($regionGroups as $group) {
+            $result = $this->recalculateGroup($group->brand_id, $group->model_id, $group->year, $group->region);
+
+            if ($result !== null) {
+                $updated++;
+            }
         }
 
         return $updated;
@@ -42,7 +66,7 @@ class MarketStatisticsService
      * Bu son sample_size talabini qanoatlantirmasa ham hisoblanadi —
      * Public API "insufficient_sample" sababini shu orqali ko'rsatadi.
      */
-    public function countAvailableListings(int $brandId, int $modelId, ?int $year): int
+    public function countAvailableListings(int $brandId, int $modelId, ?int $year, ?string $regionCode = null): int
     {
         $query = MarketListing::query()
             ->active()
@@ -56,10 +80,14 @@ class MarketStatisticsService
             $query->whereNull('year');
         }
 
+        if ($regionCode !== null) {
+            $query->where('region', $regionCode);
+        }
+
         return $query->count();
     }
 
-    public function recalculateGroup(int $brandId, int $modelId, ?int $year): ?MarketPriceStatistic
+    public function recalculateGroup(int $brandId, int $modelId, ?int $year, ?string $regionCode = null): ?MarketPriceStatistic
     {
         $query = MarketListing::query()
             ->active()
@@ -71,6 +99,10 @@ class MarketStatisticsService
             $query->where('year', $year);
         } else {
             $query->whereNull('year');
+        }
+
+        if ($regionCode !== null) {
+            $query->where('region', $regionCode);
         }
 
         $earliestListing = (clone $query)->orderBy('first_seen_at')->first();
@@ -117,7 +149,11 @@ class MarketStatisticsService
                 ->where('brand_id', $brandId)
                 ->where('model_id', $modelId)
                 ->where('year', $year)
-                ->whereNull('region_code')
+                ->when(
+                    $regionCode === null,
+                    fn ($q) => $q->whereNull('region_code'),
+                    fn ($q) => $q->where('region_code', $regionCode),
+                )
                 ->delete();
 
             return null;
@@ -132,7 +168,7 @@ class MarketStatisticsService
                 'brand_id' => $brandId,
                 'model_id' => $modelId,
                 'year' => $year,
-                'region_code' => null,
+                'region_code' => $regionCode,
             ),
             array(
                 'currency' => 'UZS',

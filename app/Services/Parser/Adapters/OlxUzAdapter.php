@@ -24,6 +24,17 @@ class OlxUzAdapter
     private const LOCATION_SELECTOR = '[data-testid="location-date"]';
     private const LINK_SELECTOR = 'a[href^="/d/obyavlenie/"]';
 
+    // Har bir e'lon kartochkasida narx/joylashuvdan tashqari, alohida
+    // "ISHLAB CHIQARISH YILI - PROBEG" qatori ham bo'ladi (masalan
+    // "2008 - 385 000 км"). Bu — YAGONA ishonchli joy, chunki u faqat
+    // mashinaning haqiqiy yiliga oid, e'lon joylangan sanaga emas.
+    // ESLATMA: bu selector OLX Group platformasining odatiy naqshiga
+    // asoslangan taxmin — agar yil hamon to'g'ri chiqmasa (yoki hamma
+    // joyda "—" bo'lib qolsa), sahifa manba kodini (view-source) ochib,
+    // shu qatorni o'rab turgan elementning haqiqiy data-testid/class
+    // nomini tekshirib, shu konstantani yangilash kerak bo'ladi.
+    private const PARAMS_SELECTOR = '[data-testid="ad-parameters"]';
+
     // Bitta target (brend+model) uchun ko'rib chiqiladigan sahifalarning
     // yuqori chegarasi — xavfsizlik uchun (masalan mashhur model uchun
     // OLX'da yuzlab sahifa bo'lsa ham, bitta targetga cheksiz vaqt
@@ -33,22 +44,15 @@ class OlxUzAdapter
 
     // Bitta target ichida sahifalar orasidagi qo'shimcha kutish — OLX'ga
     // haddan tashqari tez-tez so'rov yubormaslik uchun (chunk job'dagi
-    // targetlar orasidagi kutishdan tashqari, qo'shimcha). 2s→1s: umumiy
-    // partiya vaqtini qisqartirish uchun (pastdagi HTTP_TIMEOUT bilan
-    // birga muvozanatlangan — 2026-08-04 tuzatish, quyidagi izohga
-    // qarang).
-    private const PAGE_REQUEST_DELAY_SECONDS = 1;
+    // targetlar orasidagi 3s kutishdan tashqari, qo'shimcha).
+    private const PAGE_REQUEST_DELAY_SECONDS = 2;
 
-    // 2026-08-03/04 tuzatish: timeout 15s→20s oshirilgan edi (chuqur
-    // sahifalarda vaqtinchalik sekinlikka bardosh berish uchun), lekin bu
-    // HAR BIR (hatto muvaffaqiyatli) so'rovning eng ko'p cho'zilish
-    // imkoniyatini oshirib, bitta partiyaning umumiy vaqtini
-    // RunParserTargetsChunkJob'ning o'z timeout'iga (o'shanda 1800s)
-    // tiqilib qoldirdi — ikkita ishga tushirish ketma-ket FAIL bo'ldi.
-    // Asl 15s'ga qaytarildi; himoya sifatida faqat qayta urinish
-    // (MAX_ATTEMPTS_PER_PAGE=2) qoldirildi — bu yetarli, chunki muammo
-    // vaqti-vaqti bilan sekinlashish edi, doimiy emas.
-    private const HTTP_TIMEOUT_SECONDS = 15;
+    // Chuqur sahifalarda (masalan page=4, page=7) OLX ba'zan sekinlashib,
+    // 15s'dan ortiq javob bermaydi (loglarda cURL 28 / HTTP 504 ko'rindi).
+    // Shuning uchun timeout 15s'dan 20s'ga oshirildi va har bir sahifa
+    // uchun 1 marta qayta urinish qo'shildi (jami 2 urinish) — bu ko'p
+    // hollarda vaqtinchalik sekinlikni "chidab" o'tkazib yuboradi.
+    private const HTTP_TIMEOUT_SECONDS = 20;
     private const MAX_ATTEMPTS_PER_PAGE = 2;
     private const RETRY_DELAY_SECONDS = 3;
 
@@ -335,18 +339,29 @@ class OlxUzAdapter
         $titleNode = $card->filter(self::TITLE_SELECTOR);
         $titleText = $titleNode->count() > 0 ? trim($titleNode->text()) : '';
 
-        // Skrinshotda ko'rilgan haqiqiy bag: OLX ba'zan reason=extended_search
+        // Skrinshotda ko'rilgan haqiqiy holat: OLX ba'zan reason=extended_search
         // belgisisiz ham target sahifasida BOSHQA modelni ko'rsatadi (masalan
-        // "Daewoo Tacuma" sahifasida "Daewoo Matiz" e'loni chiqadi). Yuqoridagi
-        // URL-marker tekshiruvi buni ushlamaydi, chunki bunday hollarda OLX
-        // hech qanday belgi qo'ymaydi. Shuning uchun kartochka sarlavhasini
-        // kutilayotgan model nomi bilan mustaqil ravishda solishtiramiz —
-        // bu ikkinchi, ko'proq umumiy himoya qatlami.
+        // "Daewoo Tacuma" sahifasida "Daewoo Matiz" e'loni chiqadi), yoki
+        // sarlavha kirill alifbosida/xato yozilgan bo'ladi (buni endi
+        // TitleModelMatcher ichida hal qilamiz — transliteratsiya va
+        // yumshoq moslik orqali).
         if (! $this->titleModelMatcher->matches($titleText, $target->carModel->name)) {
             return array('item' => null, 'rejected_reason' => 'title_model_mismatch');
         }
 
-        $year = $this->yearExtractor->extract($titleText) ?? $this->yearExtractor->extract($card->text());
+        // MUHIM TUZATISH: avval sarlavhada yil topilmasa, BUTUN kartochka
+        // matnidan (narx, joylashuv, E'LON JOYLANGAN SANA ham shu ichida)
+        // qidirilardi. Bu xato edi — OLX e'lon joylashuv sanasini ham
+        // ko'rsatadi (masalan "21 iyul 2026 й."), va bu sana mashinaning
+        // ishlab chiqarilgan yili deb NOTO'G'RI qabul qilinardi (masalan
+        // bugun joylangan 2023-yilgi mashina "2026" deb saqlanib qolgan).
+        // Endi faqat (1) sarlavha va (2) alohida "yil - probeg" qatoridan
+        // qidiramiz — ikkalasi ham HAQIQATAN mashinaning yiliga oid,
+        // e'lon sanasiga emas.
+        $paramsNode = $card->filter(self::PARAMS_SELECTOR);
+        $paramsText = $paramsNode->count() > 0 ? trim($paramsNode->first()->text()) : '';
+
+        $year = $this->yearExtractor->extract($titleText) ?? $this->yearExtractor->extract($paramsText);
 
         $brandRaw = $target->brand->name;
         $modelRaw = $target->carModel->name;
