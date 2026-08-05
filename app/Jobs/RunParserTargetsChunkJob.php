@@ -30,24 +30,10 @@ class RunParserTargetsChunkJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    // 2026-08-04: 3s→1s — OLX'ga yuboriladigan so'rovlar tezligini
-    // oshirish uchun (adapter darajasidagi PAGE_REQUEST_DELAY_SECONDS ham
-    // 1s'ga tushirildi). Bloklanish xavfi kuzatiladi — agar
-    // SourceBlockedException ko'payib ketsa, bu qiymat qaytadan oshirilishi
-    // kerak bo'ladi.
     private const REQUEST_DELAY_SECONDS = 1;
 
     public int $tries = 1;
 
-    // docker-compose.yml'dagi navbat worker'i --timeout=3600 (1 soat)
-    // bilan ishlaydi — chunk job timeout'i shundan PASTROQ bo'lishi
-    // SHART, aks holda worker chunk'ni "muddati tugagan" deb hisoblab,
-    // hech qanday belgi qoldirmasdan majburan o'ldiradi (2026-08-03/04'da
-    // aynan shu sabab bilan ikkita ishga tushirish FAIL bo'lgan — o'shanda
-    // 1800s edi va HTTP timeout oshirilgani tufayli yetarli emas edi).
-    // Endi CHUNK_SIZE 20'ga tushirilgani va HTTP/sahifa kutishlari qisqar-
-    // tirilgani bilan birga, 3300s (55 daqiqa) worker chegarasidan xavfsiz
-    // zaxira bilan pastroq turadi.
     public int $timeout = 3300;
 
     /**
@@ -105,9 +91,6 @@ class RunParserTargetsChunkJob implements ShouldQueue
                     'last_error' => $e->getMessage(),
                 ));
 
-                // Manba butunligicha 2 soatga "tinch turish" rejimiga o'tadi —
-                // navbatda kutayotgan boshqa chunk'lar ham buni ko'rib,
-                // ishni boshlamasdan darhol chiqib ketadi.
                 $source->update(array('blocked_until' => now()->addHours(2)));
 
                 Log::warning("RunParserTargetsChunkJob: {$this->sourceCode} 2 soatga bloklandi deb belgilandi, qolgan barcha partiyalar shu muddat davomida o'tkazib yuboriladi.");
@@ -140,11 +123,17 @@ class RunParserTargetsChunkJob implements ShouldQueue
                 if ($result['item'] === null) {
                     $rejectedCount++;
 
+                    // Asl sarlavha matnini SAQLAB QOLAMIZ — shunda admin
+                    // panelda "nega bu rad etildi?" degan savolga TAXMIN
+                    // emas, ANIQ matn orqali javob topish mumkin.
+                    $titleRaw = $result['title_raw'] ?? null;
+
                     if ($result['rejected_reason'] === 'olx_fallback_result') {
                         ParserRejectionLog::create(array(
                             'source_id' => $target->source_id,
                             'brand_raw' => $target->brand->name,
                             'model_raw' => $target->carModel->name,
+                            'title_raw' => $titleRaw,
                             'code' => 'olx_fallback_result',
                             'message' => "OLX'ning \"hech narsa topilmadi, o'xshashlarini ko'ring\" fallback "
                                 . "natijasi — parser darajasida rad etildi (target: {$target->brand->name} {$target->carModel->name}).",
@@ -157,6 +146,7 @@ class RunParserTargetsChunkJob implements ShouldQueue
                             'source_id' => $target->source_id,
                             'brand_raw' => $target->brand->name,
                             'model_raw' => $target->carModel->name,
+                            'title_raw' => $titleRaw,
                             'code' => 'title_model_mismatch',
                             'message' => "Kartochka sarlavhasida kutilgan model nomi topilmadi — OLX belgisiz "
                                 . "boshqa model ko'rsatdi (target: {$target->brand->name} {$target->carModel->name}).",
@@ -193,16 +183,6 @@ class RunParserTargetsChunkJob implements ShouldQueue
                 }
             }
 
-            // TZ bo'lim 12 ("Snapshot"): target (brend+model sahifasi) TO'LIQ
-            // va muvaffaqiyatli qayta ko'rib chiqilgani uchun — shu sahifada
-            // ko'rilmagan, lekin bazada "active" turgan boshqa e'lonlarning
-            // missing_runs sonini oshiramiz. Faqat pagination TO'LIQ tugagan
-            // holatda chaqiriladi ($extraction['complete'] === true) —
-            // agar biror sahifada vaqtinchalik xato tufayli erta to'xtagan
-            // bo'lsa, keyingi (ko'rilmagan) sahifalardagi FAOL e'lonlar
-            // noto'g'ri "yo'qolgan" deb belgilanib qolmasligi kerak. Topilgan
-            // e'lonlarning o'zi baribir yuqorida ingest qilingan — faqat
-            // "yo'qolgan" belgilash shu safar o'tkazib yuborilgan, xolos.
             if ($extraction['complete']) {
                 $ingestionService->markMissingForModel($target->source_id, $target->model_id, $seenExternalIds);
 
