@@ -177,8 +177,12 @@ it('does not count non-UZS listings whose price_uzs has not been converted yet',
     expect($stat)->toBeNull();
 });
 
-it('excludes a clear outlier via IQR filtering and reports the correct excluded_count', function () {
-    $amounts = array(100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000);
+it('excludes a clear outlier via IQR filtering once sample_size reaches the IQR threshold (TZ: 20)', function () {
+    // 20 ta baravar taqsimlangan qiymat (100M dan 290M gacha, 10M qadam bilan).
+    $amounts = array();
+    for ($i = 0; $i < 20; $i++) {
+        $amounts[] = 100_000_000 + ($i * 10_000_000);
+    }
 
     foreach ($amounts as $amount) {
         makeMatchedListing($this->brand->id, $this->model->id, 2026, array(
@@ -187,7 +191,7 @@ it('excludes a clear outlier via IQR filtering and reports the correct excluded_
         ));
     }
 
-    // Aniq outlier — qolgan 10 tadan keskin farq qiladi.
+    // Aniq outlier — jami tanlanma 21 taga yetadi, ya'ni IQR chegarasi (20) ga yetadi/oshadi.
     makeMatchedListing($this->brand->id, $this->model->id, 2026, array(
         'price_amount' => 900_000_000,
         'price_uzs' => 900_000_000,
@@ -196,10 +200,69 @@ it('excludes a clear outlier via IQR filtering and reports the correct excluded_
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2026);
 
     expect($stat)->not->toBeNull();
-    expect($stat->sample_size)->toBe(10); // outlier chiqarib tashlangach
+    expect($stat->sample_size)->toBe(20); // outlier IQR orqali chiqarib tashlangach
     expect($stat->excluded_count)->toBe(1);
-    expect($stat->median_price_uzs)->toBe(145_000_000);
-    expect($stat->max_price_uzs)->toBe(190_000_000); // 900M statistikaga kirmagan
+    expect($stat->median_price_uzs)->toBe(195_000_000);
+    expect($stat->max_price_uzs)->toBe(290_000_000); // 900M statistikaga kirmagan
+});
+
+it('does NOT apply IQR when sample_size is below the IQR threshold — only global bounds apply (TZ 11-bo\'lim, 4-bosqich)', function () {
+    // 10 ta oddiy narx + 1 ta juda katta narx — jami 11 ta, IQR chegarasi (20) dan kam.
+    $amounts = array(100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000);
+
+    foreach ($amounts as $amount) {
+        makeMatchedListing($this->brand->id, $this->model->id, 2027, array(
+            'price_amount' => $amount,
+            'price_uzs' => $amount,
+        ));
+    }
+
+    makeMatchedListing($this->brand->id, $this->model->id, 2027, array(
+        'price_amount' => 900_000_000,
+        'price_uzs' => 900_000_000,
+    ));
+
+    $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2027);
+
+    expect($stat)->not->toBeNull();
+    // Tanlanma (11) IQR chegarasidan (20) kam bo'lgani uchun 900M chiqarib tashlanmaydi —
+    // u global chegaralar (standart: 3M-2B so'm) ichida qoladi.
+    expect($stat->sample_size)->toBe(11);
+    expect($stat->excluded_count)->toBe(0);
+    expect($stat->max_price_uzs)->toBe(900_000_000);
+});
+
+it('excludes prices outside the configured global bounds regardless of sample size (TZ 11-bo\'lim, 1-2-bosqich)', function () {
+    $amounts = array(100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000);
+
+    foreach ($amounts as $amount) {
+        makeMatchedListing($this->brand->id, $this->model->id, 2028, array(
+            'price_amount' => $amount,
+            'price_uzs' => $amount,
+        ));
+    }
+
+    // "Aniq to'liqsiz" narx — global minimumdan (standart 3M so'm) past.
+    makeMatchedListing($this->brand->id, $this->model->id, 2028, array(
+        'price_amount' => 500_000,
+        'price_uzs' => 500_000,
+    ));
+
+    // Realistik bo'lmagan haddan tashqari katta narx — global maksimumdan (standart 2B so'm) yuqori.
+    makeMatchedListing($this->brand->id, $this->model->id, 2028, array(
+        'price_amount' => 3_000_000_000,
+        'price_uzs' => 3_000_000_000,
+    ));
+
+    $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2028);
+
+    expect($stat)->not->toBeNull();
+    // Jami 12 ta yuborilgan, lekin 2 tasi global chegaradan tashqarida — 10 ta qoladi.
+    // 10 < IQR chegarasi (20), shuning uchun IQR qo'llanilmaydi, faqat global chegaralar ishlaydi.
+    expect($stat->sample_size)->toBe(10);
+    expect($stat->excluded_count)->toBe(2);
+    expect($stat->min_price_uzs)->toBe(100_000_000);
+    expect($stat->max_price_uzs)->toBe(190_000_000);
 });
 
 it('counts available listings regardless of price validity', function () {
