@@ -141,8 +141,9 @@ class MarketStatisticsService
         }
 
         $sampleSizeBeforeFilter = sizeof($prices);
+        $minSampleSize = (int) config('market_statistics.min_sample_size', self::MIN_SAMPLE_SIZE);
 
-        if ($sampleSizeBeforeFilter < self::MIN_SAMPLE_SIZE) {
+        if ($sampleSizeBeforeFilter < $minSampleSize) {
             // Tanlanma yetarli emas — statistika yaratilmaydi/yangilanmaydi.
             // Agar avval yaratilgan bo'lsa, uni ham o'chiramiz (endi ko'rsatilmasligi kerak).
             MarketPriceStatistic::query()
@@ -159,8 +160,30 @@ class MarketStatisticsService
             return null;
         }
 
-        $cleanPrices = $this->calculator->filterOutliers($prices);
+        $cleanPrices = $this->calculator->filterOutliers(
+            $prices,
+            (int) config('market_statistics.global_min_price_uzs'),
+            (int) config('market_statistics.global_max_price_uzs'),
+            (int) config('market_statistics.iqr_min_sample_size'),
+        );
         $excludedCount = $sampleSizeBeforeFilter - sizeof($cleanPrices);
+
+        if (sizeof($cleanPrices) === 0) {
+            // Global chegaralardan o'tgan birorta ham narx qolmadi.
+            MarketPriceStatistic::query()
+                ->where('brand_id', $brandId)
+                ->where('model_id', $modelId)
+                ->where('year', $year)
+                ->when(
+                    $regionCode === null,
+                    fn ($q) => $q->whereNull('region_code'),
+                    fn ($q) => $q->where('region_code', $regionCode),
+                )
+                ->delete();
+
+            return null;
+        }
+
         $stats = $this->calculator->calculate($cleanPrices);
 
         return MarketPriceStatistic::updateOrCreate(
