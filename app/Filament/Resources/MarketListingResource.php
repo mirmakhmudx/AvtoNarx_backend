@@ -173,8 +173,7 @@ class MarketListingResource extends Resource
 
                 Tables\Columns\TextColumn::make('region')
                     ->label('Hudud')
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('last_seen_at')
                     ->label('Oxirgi ko\'rilgan')

@@ -82,6 +82,14 @@ class ParserRejectionLogResource extends Resource
                     ->formatStateUsing(fn (ParserRejectionLog $record): string => trim(($record->brand_raw ?? '—') . ' ' . ($record->model_raw ?? '')))
                     ->searchable(['brand_raw', 'model_raw']),
 
+                Tables\Columns\TextColumn::make('title_raw')
+                    ->label('Asl sarlavha (OLX)')
+                    ->searchable()
+                    ->wrap()
+                    ->limit(80)
+                    ->placeholder('—')
+                    ->color('gray'),
+
                 Tables\Columns\TextColumn::make('price_amount')
                     ->label('Narx')
                     ->formatStateUsing(fn (ParserRejectionLog $record): string => $record->price_amount !== null

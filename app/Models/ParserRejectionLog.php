@@ -13,6 +13,7 @@ class ParserRejectionLog extends Model
         'canonical_url',
         'brand_raw',
         'model_raw',
+        'title_raw',
         'price_amount',
         'currency',
         'code',
