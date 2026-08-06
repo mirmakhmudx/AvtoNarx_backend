@@ -13,15 +13,18 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
-    // Public API
-    Route::get('brands', array(PublicBrandController::class, 'index'));
-    Route::get('brands/{slug}', array(PublicBrandController::class, 'show'));
-    Route::get('brands/{brandSlug}/models', array(PublicCarModelController::class, 'index'));
-    Route::get('models/{carModel}/prices', array(ModelPriceController::class, 'index'));
-    Route::get('filters', array(FilterController::class, 'index'));
+    // Public API — TZ 13-bo'lim: 120 so'rov/daqiqa/IP
+    Route::middleware('throttle:public-api')->group(function () {
+        Route::get('brands', array(PublicBrandController::class, 'index'));
+        Route::get('brands/{slug}', array(PublicBrandController::class, 'show'));
+        Route::get('brands/{brandSlug}/models', array(PublicCarModelController::class, 'index'));
+        Route::get('models/{carModel}/prices', array(ModelPriceController::class, 'index'));
+        Route::get('filters', array(FilterController::class, 'index'));
+    });
 
-    // Parser / Ingestion API — Sanctum token bilan himoyalangan
-    Route::middleware('auth:sanctum')->prefix('ingestion')->group(function () {
+    // Parser / Ingestion API — Sanctum token bilan himoyalangan,
+    // TZ 13-bo'lim: 30 so'rov/daqiqa/token
+    Route::middleware(array('auth:sanctum', 'throttle:ingestion'))->prefix('ingestion')->group(function () {
         Route::post('market-listings/batches', array(IngestionController::class, 'storeMarketListingsBatch'));
         Route::post('official-offers/batches', array(IngestionController::class, 'storeOfficialOffersBatch'));
         Route::get('batches/{batchId}', array(IngestionController::class, 'showBatch'));

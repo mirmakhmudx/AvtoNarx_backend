@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
+use App\Services\PublicApi\ApiCacheService;
 use App\Services\PublicApi\FilterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,7 @@ class FilterController extends Controller
 {
     public function __construct(
         private readonly FilterService $filterService,
+        private readonly ApiCacheService $apiCache,
     ) {
     }
 
@@ -28,14 +30,18 @@ class FilterController extends Controller
             }
         }
 
-        $filters = $this->filterService->getFilters($brand);
+        $cacheKey = 'public:v1:filters:brand:' . ($brandSlug ?? 'all');
 
-        return response()->json(array(
-            'data' => array(
-                'brand' => $brand ? array('id' => $brand->id, 'slug' => $brand->slug, 'name' => $brand->name) : null,
-                'years' => $filters['years'],
-                'regions' => $filters['regions'],
-            ),
-        ));
+        return $this->apiCache->respond($cacheKey, $request, function () use ($brand) {
+            $filters = $this->filterService->getFilters($brand);
+
+            return array(
+                'data' => array(
+                    'brand' => $brand ? array('id' => $brand->id, 'slug' => $brand->slug, 'name' => $brand->name) : null,
+                    'years' => $filters['years'],
+                    'regions' => $filters['regions'],
+                ),
+            );
+        });
     }
 }

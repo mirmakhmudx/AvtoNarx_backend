@@ -24,9 +24,7 @@ class MarketPriceStatisticResource extends Resource
 
     protected static ?int $navigationSort = 9;
 
-    // Bu jadval to'liq avtomatik hisoblanadi (RecalculateStatisticsJob,
-    // har kuni soat 23:45'da) — qo'lda yaratish, tahrirlash yoki o'chirish
-    // yo'q, faqat KO'RISH uchun.
+  
     public static function canCreate(): bool
     {
         return false;

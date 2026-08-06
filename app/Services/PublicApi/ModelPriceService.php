@@ -15,12 +15,18 @@ class ModelPriceService
     ) {
     }
 
-    public function getPriceStatuses(CarModel $carModel, ?int $year = null): array
+    public function getPriceStatuses(CarModel $carModel, ?int $year = null, ?string $regionCode = null): array
     {
         $query = MarketPriceStatistic::query()->where('model_id', $carModel->id);
 
         if ($year !== null) {
             $query->where('year', $year);
+        }
+
+        if ($regionCode !== null) {
+            $query->where('region_code', $regionCode);
+        } else {
+            $query->whereNull('region_code');
         }
 
         $statistics = $query->orderByDesc('year')->get()->keyBy('year');
@@ -44,7 +50,8 @@ class ModelPriceService
             $availableCount = $this->statisticsService->countAvailableListings(
                 $carModel->brand_id,
                 $carModel->id,
-                $y
+                $y,
+                $regionCode
             );
 
             $result[] = array(
@@ -78,8 +85,8 @@ class ModelPriceService
         return empty($merged) ? array(null) : $merged;
     }
 
-    public function getCheapestOfficialOffer(CarModel $carModel)
+    public function getCheapestOfficialOffer(CarModel $carModel, ?int $year = null)
     {
-        return $this->officialOfferService->cheapestForModel($carModel->id);
+        return $this->officialOfferService->cheapestForModel($carModel->id, $year);
     }
 }
