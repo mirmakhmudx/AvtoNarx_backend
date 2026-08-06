@@ -51,7 +51,7 @@ class ModelPriceService
                 'year' => $y,
                 'status' => $availableCount > 0 ? 'insufficient_sample' : 'no_data',
                 'sample_size' => $availableCount,
-                'min_required' => MarketStatisticsService::MIN_SAMPLE_SIZE,
+                'min_required' => (int) config('market_statistics.min_sample_size', MarketStatisticsService::MIN_SAMPLE_SIZE),
                 'statistic' => null,
             );
         }

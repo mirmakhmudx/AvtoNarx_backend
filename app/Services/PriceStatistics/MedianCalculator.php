@@ -25,25 +25,46 @@ class MedianCalculator
         return $result;
     }
 
-    public function filterOutliers(array $prices): array
+    /**
+     * TZ 11-bo'lim, "Tozalash" bosqichlari:
+     *
+     * 1. Narxning global chegaralari.
+     * 2. Nol va aniq to'liqsiz narxlar chiqarib tashlanadi
+     *    ($globalMinPrice/$globalMaxPrice orqali — 0 va sozlangan
+     *    minimumdan past "to'liqsiz" narxlar shu chegara bilan chiqib ketadi).
+     * 3. sample_size $iqrMinSampleSize'dan (TZ: 20) boshlab IQR qo'llaniladi:
+     *    Q1 - 1.5*IQR va Q3 + 1.5*IQR.
+     * 4. Kichikroq tanlanmada — faqat sozlangan (global) chegaralar.
+     */
+    public function filterOutliers(array $prices, int $globalMinPrice, int $globalMaxPrice, int $iqrMinSampleSize): array
     {
-        $total = sizeof($prices);
-
-        if ($total < 4) {
-            return $prices;
+        // 1-2 bosqich: global chegaralar (shu bilan nol va "to'liqsiz" narxlar ham chiqadi).
+        $bounded = array();
+        foreach ($prices as $price) {
+            if ($price >= $globalMinPrice && $price <= $globalMaxPrice) {
+                $bounded[] = $price;
+            }
         }
 
-        sort($prices);
+        $total = sizeof($bounded);
 
-        $q1 = $this->percentile($prices, 25);
-        $q3 = $this->percentile($prices, 75);
+        // 4-bosqich: tanlanma IQR uchun yetarli emas — global chegaralar bilan cheklanamiz.
+        if ($total < $iqrMinSampleSize) {
+            return $bounded;
+        }
+
+        sort($bounded);
+
+        // 3-bosqich: IQR.
+        $q1 = $this->percentile($bounded, 25);
+        $q3 = $this->percentile($bounded, 75);
         $iqr = $q3 - $q1;
 
         $lowerBound = $q1 - (1.5 * $iqr);
         $upperBound = $q3 + (1.5 * $iqr);
 
         $filtered = array();
-        foreach ($prices as $price) {
+        foreach ($bounded as $price) {
             if ($price >= $lowerBound && $price <= $upperBound) {
                 $filtered[] = $price;
             }
