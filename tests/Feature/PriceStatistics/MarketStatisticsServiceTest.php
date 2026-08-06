@@ -28,6 +28,7 @@ beforeEach(function () {
     $this->service = app(MarketStatisticsService::class);
 });
 
+
 /**
  * Har chaqiruvda unikal external_id/content_hash bilan "matched" va "active"
  * MarketListing yaratadi — statistikaga kirishi kerak bo'lgan standart holat.
@@ -276,4 +277,64 @@ it('counts available listings regardless of price validity', function () {
     $count = $this->service->countAvailableListings($this->brand->id, $this->model->id, 2020);
 
     expect($count)->toBe(4);
+});
+
+it('excludes NEW-condition listings from the secondary-market sample (TZ 11-bo\'lim)', function () {
+    // 9 ta haqiqiy "used" e'lon.
+    for ($i = 0; $i < 9; $i++) {
+        makeMatchedListing($this->brand->id, $this->model->id, 2019, array(
+            'price_amount' => 100_000_000,
+            'price_uzs' => 100_000_000,
+            'condition' => 'used',
+        ));
+    }
+
+    // 5 ta YANGI ('new') mashina — ular official_offers'ga tegishli va
+    // ikkilamchi bozor medianasiga umuman kirmasligi kerak.
+    for ($i = 0; $i < 5; $i++) {
+        makeMatchedListing($this->brand->id, $this->model->id, 2019, array(
+            'price_amount' => 200_000_000,
+            'price_uzs' => 200_000_000,
+            'condition' => 'new',
+        ));
+    }
+
+    $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2019);
+
+    // 'new'lar chiqarilgach faqat 9 ta "used" qoladi — bu MIN_SAMPLE_SIZE (10)
+    // dan kam, shuning uchun statistika yaratilmaydi. Bu 'new'larning
+    // tanlanmaga umuman qo'shilmayotganini isbotlaydi (aks holda 14 ta bo'lardi).
+    expect($stat)->toBeNull();
+
+    // countAvailableListings ham faqat "used"larni sanashi kerak.
+    expect($this->service->countAvailableListings($this->brand->id, $this->model->id, 2019))->toBe(9);
+});
+
+it('excludes listings older than the freshness window (72h) from the sample (TZ 11-bo\'lim)', function () {
+    // 10 ta yangi (last_seen_at = now) "used" e'lon — normalda statistika chiqishi kerak.
+    $listings = array();
+    for ($i = 0; $i < 10; $i++) {
+        $listings[] = makeMatchedListing($this->brand->id, $this->model->id, 2018, array(
+            'price_amount' => 100_000_000,
+            'price_uzs' => 100_000_000,
+            'last_seen_at' => now(),
+        ));
+    }
+
+    $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2018);
+    expect($stat)->not->toBeNull();
+    expect($stat->sample_size)->toBe(10);
+
+    // Endi 3 ta yozuvni 72 soatdan eski qilamiz — ular hali "active" bo'lsa
+    // ham (ExpireStaleListingsJob hali ishlamagan bo'lishi mumkin),
+    // statistikaga kirmasligi kerak. UPDATE...LIMIT ishlatmaymiz (Postgres
+    // uni qo'llab-quvvatlamaydi) — aniq ID'lar bo'yicha yangilaymiz.
+    foreach (array_slice($listings, 0, 3) as $listing) {
+        $listing->update(array('last_seen_at' => now()->subHours(80)));
+    }
+
+    $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2018);
+
+    // 3 tasi eskirgan → 7 ta qoladi → MIN_SAMPLE_SIZE (10) dan kam → null.
+    expect($stat)->toBeNull();
 });
