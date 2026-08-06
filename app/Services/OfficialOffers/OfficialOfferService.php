@@ -55,13 +55,17 @@ class OfficialOfferService
         return $expired;
     }
 
-    public function cheapestForModel(int $modelId): ?OfficialOffer
+    public function cheapestForModel(int $modelId, ?int $year = null): ?OfficialOffer
     {
-        return OfficialOffer::query()
+        $query = OfficialOffer::query()
             ->published()
-            ->where('model_id', $modelId)
-            ->orderBy('price_amount')
-            ->first();
+            ->where('model_id', $modelId);
+
+        if ($year !== null) {
+            $query->where('year', $year);
+        }
+
+        return $query->orderBy('price_amount')->first();
     }
 
     public function listPendingForModeration(): Collection

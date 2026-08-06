@@ -309,7 +309,7 @@ class OlxUzAdapter
         $externalIdRaw = $card->attr('id');
 
         if (! $externalIdRaw) {
-            return array('item' => null, 'rejected_reason' => 'missing_external_id', 'title_raw' => null);
+            return array('item' => null, 'rejected_reason' => 'missing_external_id', 'title_raw' => null, 'canonical_url' => null);
         }
 
         $externalId = 'olx-' . $externalIdRaw;
@@ -320,7 +320,7 @@ class OlxUzAdapter
         $money = $this->moneyExtractor->extract($priceText);
 
         if ($money === null) {
-            return array('item' => null, 'rejected_reason' => 'invalid_price', 'title_raw' => null);
+            return array('item' => null, 'rejected_reason' => 'invalid_price', 'title_raw' => null, 'canonical_url' => null);
         }
 
         $linkNode = $card->filter(self::LINK_SELECTOR)->first();
@@ -328,18 +328,18 @@ class OlxUzAdapter
         $canonicalUrl = $href ? self::BASE_URL . $href : null;
 
         if (! $canonicalUrl) {
-            return array('item' => null, 'rejected_reason' => 'missing_url', 'title_raw' => null);
+            return array('item' => null, 'rejected_reason' => 'missing_url', 'title_raw' => null, 'canonical_url' => null);
         }
 
         $titleNode = $card->filter(self::TITLE_SELECTOR);
         $titleText = $titleNode->count() > 0 ? trim($titleNode->text()) : '';
 
         if (str_contains($canonicalUrl, 'reason=extended_search')) {
-            return array('item' => null, 'rejected_reason' => 'olx_fallback_result', 'title_raw' => $titleText);
+            return array('item' => null, 'rejected_reason' => 'olx_fallback_result', 'title_raw' => $titleText, 'canonical_url' => $canonicalUrl);
         }
 
         if (! $this->titleModelMatcher->matches($titleText, $target->carModel->name)) {
-            return array('item' => null, 'rejected_reason' => 'title_model_mismatch', 'title_raw' => $titleText);
+            return array('item' => null, 'rejected_reason' => 'title_model_mismatch', 'title_raw' => $titleText, 'canonical_url' => $canonicalUrl);
         }
 
         $locationNode = $card->filter(self::LOCATION_SELECTOR);
