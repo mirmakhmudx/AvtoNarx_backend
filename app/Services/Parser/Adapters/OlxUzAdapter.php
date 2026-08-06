@@ -25,13 +25,23 @@ class OlxUzAdapter
     private const LINK_SELECTOR = 'a[href^="/d/obyavlenie/"]';
 
     private const MAX_PAGES_PER_TARGET = 10;
+    private const MAX_CONSECUTIVE_EMPTY_PAGES = 2;
 
+    // VAQTINCHALIK CHEKLOV (lokal kompyuterda sinov uchun): har bir target
+    // (brend+model) uchun 10 ta MUVAFFAQIYATLI element yig'ilgach, keyingi
+    // sahifalarga o'tilmaydi. REAL SERVERGA chiqarilganda bu qatorni
+    // albatta o'chirib tashlang (yoki juda katta songa o'zgartiring).
     private const MAX_ITEMS_PER_TARGET = 10;
 
     private const PAGE_REQUEST_DELAY_SECONDS = 2;
     private const HTTP_TIMEOUT_SECONDS = 20;
     private const MAX_ATTEMPTS_PER_PAGE = 2;
     private const RETRY_DELAY_SECONDS = 3;
+
+    // Detail sahifaga (bitta e'lonning to'liq sahifasi) so'rov yuborishdan
+    // oldingi kutish — bu qo'shimcha, kartochka sahifalaridan alohida
+    // so'rov, shuning uchun alohida (kichikroq) kutish beriladi.
+    private const DETAIL_PAGE_REQUEST_DELAY_SECONDS = 1;
 
     public function __construct(
         private readonly MoneyExtractor $moneyExtractor,
@@ -41,10 +51,13 @@ class OlxUzAdapter
     ) {
     }
 
-
+    /**
+     * @return array{results: array<int, array{item: array|null, rejected_reason: string|null, title_raw: string|null}>, complete: bool, error: string|null}
+     */
     public function extractFromTarget(ParserTarget $target): array
     {
         $allResults = array();
+        $consecutiveEmptyPages = 0;
 
         for ($page = 1; $page <= self::MAX_PAGES_PER_TARGET; $page++) {
             try {
@@ -65,6 +78,22 @@ class OlxUzAdapter
 
             $allResults = array_merge($allResults, $pageResults);
 
+            $matchedOnThisPage = 0;
+            foreach ($pageResults as $r) {
+                if ($r['item'] !== null) {
+                    $matchedOnThisPage++;
+                }
+            }
+
+            if ($matchedOnThisPage === 0) {
+                $consecutiveEmptyPages++;
+            } else {
+                $consecutiveEmptyPages = 0;
+            }
+
+            if ($consecutiveEmptyPages >= self::MAX_CONSECUTIVE_EMPTY_PAGES) {
+                break;
+            }
 
             $collectedCount = 0;
             foreach ($allResults as $r) {
@@ -82,10 +111,29 @@ class OlxUzAdapter
             }
         }
 
+        // YIL TO'LDIRISH BOSQICHI: kartochkada yil topilmagan, lekin
+        // QABUL QILINGAN elementlar uchun — e'lonning TO'LIQ sahifasiga
+        // alohida kirib, aniq "Год выпуска: XXXX" ni olamiz. Faqat
+        // ZARUR bo'lganda (yil hali yo'q bo'lsa) qilinadi, shuning uchun
+        // qo'shimcha so'rovlar soni cheklangan (odatda ~10 tagacha).
+        foreach ($allResults as $i => $r) {
+            if ($r['item'] !== null && $r['item']['year'] === null) {
+                sleep(self::DETAIL_PAGE_REQUEST_DELAY_SECONDS);
+
+                $detailYear = $this->fetchYearFromDetailPage($r['item']['canonical_url']);
+
+                if ($detailYear !== null) {
+                    $allResults[$i]['item']['year'] = $detailYear;
+                }
+            }
+        }
+
         return array('results' => $allResults, 'complete' => true, 'error' => null);
     }
 
-
+    /**
+     * @return array<int, array{item: array|null, rejected_reason: string|null, title_raw: string|null}>|null
+     */
     private function fetchPage(ParserTarget $target, int $page): ?array
     {
         $url = $this->buildPageUrl($target->target_url, $page);
@@ -209,21 +257,48 @@ class OlxUzAdapter
         return $cityOnly !== '' ? $cityOnly : null;
     }
 
-    /**
-     * SELEKTORGA TAYANMAYDIGAN, ISHONCHLI yil qidiruvi: OLX'da har bir
-     * kartochkada "ISHLAB CHIQARISH YILI - PROBEG" formatidagi qator
-     * bo'ladi. Ikki ko'rinishda uchraydi:
-     *  - "2008 - 385 000 км" (yurgan bo'lsa, "км" bilan)
-     *  - "2026 - 0" (yangi/0 km mashina — "км" so'zisiz!)
-     * Shuning uchun ikkalasini ham qamrab olamiz: yil'dan keyin tire, so'ng
-     * "N NNN км" YOKI yolg'iz "0". Bu naqish joylashuv sanasida ("21 iyul
-     * 2026 й.") HECH QACHON uchramaydi, chunki u yildan keyin darhol tire
-     * bilan davom etmaydi (" г." bilan tugaydi).
-     */
     private function extractYearFromCardText(string $cardText): ?int
     {
         if (preg_match('/\b(19[5-9]\d|20\d{2})\b\s*-\s*(?:[\d\s\x{00A0}]*км\b|0\b)/u', $cardText, $matches)) {
             return (int) $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Kartochkada yil topilmagan hollar uchun ZAXIRA usul: e'lonning
+     * TO'LIQ sahifasiga alohida so'rov yuborib, u yerdagi rasmiy
+     * "Год выпуска: XXXX" parametridan aniq yilni o'qiydi. Bu — eng
+     * ISHONCHLI manba, chunki bu sotuvchi to'ldirgan rasmiy forma maydoni,
+     * sarlavha yoki qidiruv natijasidagi taxminiy matn emas.
+     *
+     * Xato/timeout bo'lsa jimgina null qaytaradi — bitta e'lonning yili
+     * topilmasa ham, butun jarayonni to'xtatishga arzimaydi.
+     */
+    private function fetchYearFromDetailPage(string $url): ?int
+    {
+        try {
+            $response = Http::withHeaders(array(
+                'User-Agent' => self::USER_AGENT,
+            ))->timeout(self::HTTP_TIMEOUT_SECONDS)->get($url);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        // OLX'da bu maydon "Год выпуска: 2020" formatida, alohida
+        // "belgi" (chip) sifatida chiqadi (rasmga qarang — Toyota Avalon
+        // misolida ham xuddi shunday edi).
+        if (preg_match('/Год\s+выпуска[:\s]*(\d{4})/u', $response->body(), $matches)) {
+            $year = (int) $matches[1];
+
+            if ($year >= 1950 && $year <= (int) date('Y') + 1) {
+                return $year;
+            }
         }
 
         return null;
@@ -259,21 +334,10 @@ class OlxUzAdapter
         $titleNode = $card->filter(self::TITLE_SELECTOR);
         $titleText = $titleNode->count() > 0 ? trim($titleNode->text()) : '';
 
-        // Faqat ENG ANIQ chiqindi belgisi — OLX'ning "hech narsa topilmadi,
-        // o'xshashlarini ko'ring" fallback natijasi. Bu — butunlay bog'liq
-        // bo'lmagan narsalar (soat, uy) shu orqali kirib kelgan edi.
         if (str_contains($canonicalUrl, 'reason=extended_search')) {
             return array('item' => null, 'rejected_reason' => 'olx_fallback_result', 'title_raw' => $titleText);
         }
 
-        // MUHIM QAROR (qayta ko'rib chiqildi): sarlavha bo'yicha marka/model
-        // tekshiruvi AVVAL olib tashlangan edi ("target o'ziga ishonaylik"
-        // degan g'oya bilan), lekin bu bir xil marka ichida BOSHQA modelni
-        // (masalan "JAC iEVS4" target'ida "JAC Pickup" e'loni) aralashtirib
-        // yuborishga olib keldi — bu qabul qilinmaydigan xato. Shuning
-        // uchun tekshiruv QAYTA yoqildi. TitleModelMatcher endi kirillcha
-        // transliteratsiya va kichik yozuv xatolariga (1-2 harf) toqatli,
-        // shuning uchun haqiqiy e'lonlarni ortiqcha rad etmasligi kerak.
         if (! $this->titleModelMatcher->matches($titleText, $target->carModel->name)) {
             return array('item' => null, 'rejected_reason' => 'title_model_mismatch', 'title_raw' => $titleText);
         }
@@ -282,9 +346,10 @@ class OlxUzAdapter
         $locationText = $locationNode->count() > 0 ? trim($locationNode->text()) : null;
         $region = $this->extractRegion($locationText);
 
-        // Yil: avval sarlavhadan, topilmasa — kartochkaning TO'LIQ matnidan
-        // "YIL - PROBEG км" naqshi orqali (yuqoridagi izohga qarang, bu
-        // sana bilan chalkashib ketmaydi).
+        // Yil: avval sarlavhadan, keyin kartochka matnidagi "YIL - PROBEG"
+        // naqshidan. Bu yerda ham topilmasa — null qoladi, va
+        // extractFromTarget() darajasida (yuqorida) detail sahifadan
+        // ZAXIRA sifatida olinishga urinilib ko'riladi.
         $year = $this->yearExtractor->extract($titleText) ?? $this->extractYearFromCardText($card->text());
 
         $brandRaw = $target->brand->name;
