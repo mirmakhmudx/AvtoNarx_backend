@@ -17,15 +17,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-/**
- * RunParserSourceJob tomonidan bo'lingan bitta partiya (odatda ~100 ta
- * parser_target) ustida ishlaydi. Bir nechta kichik chunk job'ga bo'lish
- * sababi: 1000+ target bitta uzun job ichida ishlansa, u navbat/PHP
- * timeout'iga (masalan 3600s) sig'may qolishi va hech qanday belgi
- * qoldirmasdan o'chirilib qolishi mumkin edi. Har bir chunk mustaqil job
- * sifatida ishlaydi — bittasi muvaffaqiyatsiz tugasa ham qolganlar
- * navbatda kutib turadi va ishlashda davom etadi.
- */
 class RunParserTargetsChunkJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -123,10 +114,12 @@ class RunParserTargetsChunkJob implements ShouldQueue
                 if ($result['item'] === null) {
                     $rejectedCount++;
 
-                    // Asl sarlavha matnini SAQLAB QOLAMIZ — shunda admin
-                    // panelda "nega bu rad etildi?" degan savolga TAXMIN
-                    // emas, ANIQ matn orqali javob topish mumkin.
+                    // Asl sarlavha VA havola — shu ikkalasi bo'lsa, admin
+                    // panelda "nega bu rad etildi?" savoliga to'liq javob
+                    // topiladi: matnni o'qish VA havolani bosib, haqiqiy
+                    // e'lonni ko'rish mumkin.
                     $titleRaw = $result['title_raw'] ?? null;
+                    $canonicalUrl = $result['canonical_url'] ?? null;
 
                     if ($result['rejected_reason'] === 'olx_fallback_result') {
                         ParserRejectionLog::create(array(
@@ -134,6 +127,7 @@ class RunParserTargetsChunkJob implements ShouldQueue
                             'brand_raw' => $target->brand->name,
                             'model_raw' => $target->carModel->name,
                             'title_raw' => $titleRaw,
+                            'canonical_url' => $canonicalUrl,
                             'code' => 'olx_fallback_result',
                             'message' => "OLX'ning \"hech narsa topilmadi, o'xshashlarini ko'ring\" fallback "
                                 . "natijasi — parser darajasida rad etildi (target: {$target->brand->name} {$target->carModel->name}).",
@@ -147,6 +141,7 @@ class RunParserTargetsChunkJob implements ShouldQueue
                             'brand_raw' => $target->brand->name,
                             'model_raw' => $target->carModel->name,
                             'title_raw' => $titleRaw,
+                            'canonical_url' => $canonicalUrl,
                             'code' => 'title_model_mismatch',
                             'message' => "Kartochka sarlavhasida kutilgan model nomi topilmadi — OLX belgisiz "
                                 . "boshqa model ko'rsatdi (target: {$target->brand->name} {$target->carModel->name}).",
