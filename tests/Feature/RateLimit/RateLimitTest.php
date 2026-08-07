@@ -7,21 +7,11 @@ use Laravel\Sanctum\Sanctum;
 uses(RefreshDatabase::class);
  
 /**
- * TZ 13-bo'lim: public rate limit — 120 so'rov/daqiqa/IP.
- * 120 tagacha so'rov o'tadi, 121-so'rov 429 (Too Many Requests) qaytaradi.
- */
-it('throttles the public API at 120 requests per minute per IP (TZ 13)', function () {
-    for ($i = 0; $i < 120; $i++) {
-        $this->getJson('/api/v1/brands')->assertOk();
-    }
- 
-    $this->getJson('/api/v1/brands')->assertStatus(429);
-});
- 
-/**
  * TZ 13-bo'lim: ingestion rate limit — 30 so'rov/daqiqa/token.
  * Heartbeat endpoint'i ingestion guruhida, shuning uchun u ham shu limit ostida.
  * 30 tagacha o'tadi, 31-so'rov 429 qaytaradi.
+ *
+ * Eslatma: public (120/IP) tomoni alohida PublicApiRateLimitTest'da sinaladi.
  */
 it('throttles the ingestion API at 30 requests per minute per token (TZ 13)', function () {
     $client = ParserClient::create(array(

@@ -12,6 +12,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Throwable;
 
 class ProcessIngestionBatchJob implements ShouldQueue
 {
@@ -35,6 +38,12 @@ class ProcessIngestionBatchJob implements ShouldQueue
         }
 
         $batch->update(array('status' => 'processing'));
+
+        // Retry'ga chidamlilik: job qayta ishga tushsa (tries=3), avvalgi
+        // urinishda yozilgan item xatolari takrorlanmasligi uchun ularni
+        // avval tozalaymiz. ingest() o'zi idempotent (upsert), shuning uchun
+        // e'lonlar takrorlanmaydi; muammo faqat xato yozuvlarida edi.
+        $batch->itemErrors()->delete();
 
         $accepted = 0;
         $rejected = 0;
@@ -66,7 +75,7 @@ class ProcessIngestionBatchJob implements ShouldQueue
                     'batch_id' => $batch->id,
                     'item_index' => $index,
                     'external_id' => $item['external_id'] ?? null,
-                    'code' => $e->code,
+                    'code' => $e->errorCode(),
                     'field' => null,
                     'message' => $e->getMessage(),
                 ));
@@ -97,6 +106,43 @@ class ProcessIngestionBatchJob implements ShouldQueue
             'items_rejected' => $rejected,
             'status' => $status,
             'completed_at' => now(),
+        ));
+    }
+
+    /**
+     * Job butunlay yiqilganda (barcha urinishlar tugagach) chaqiriladi —
+     * masalan DB uzilib qolsa yoki batch->update() xato bersa. Bunday holatda
+     * batch 'processing' holatida QOTIB QOLMASLIGI kerak (TZ 15): uni 'failed'
+     * qilamiz va sababni error_summary'ga yozamiz. Shunda parser status_url
+     * orqali batch muvaffaqiyatsiz tugaganini ko'radi.
+     */
+    public function failed(Throwable $e): void
+    {
+        $batch = IngestionBatch::find($this->batchId);
+
+        if ($batch === null) {
+            return;
+        }
+
+        // Allaqachon yakunlangan (completed/partial) batch'ga tegmaymiz.
+        if (in_array($batch->status, array('completed', 'partial'), true)) {
+            return;
+        }
+
+        $batch->update(array(
+            'status' => 'failed',
+            'error_summary' => array(
+                'exception' => class_basename($e),
+                'message' => Str::limit($e->getMessage(), 500),
+                'failed_at' => now()->toIso8601String(),
+            ),
+            'completed_at' => now(),
+        ));
+
+        Log::error('ProcessIngestionBatchJob butunlay yiqildi', array(
+            'batch_id' => $this->batchId,
+            'exception' => $e::class,
+            'message' => $e->getMessage(),
         ));
     }
 }
