@@ -29,10 +29,6 @@ beforeEach(function () {
 });
 
 
-/**
- * Har chaqiruvda unikal external_id/content_hash bilan "matched" va "active"
- * MarketListing yaratadi — statistikaga kirishi kerak bo'lgan standart holat.
- */
 function makeMatchedListing(int $brandId, int $modelId, ?int $year, array $overrides = array()): MarketListing
 {
     static $counter = 0;
