@@ -26,7 +26,8 @@
         "pestphp/pest": "^4.7",
         "pestphp/pest-plugin-laravel": "^4.1",
         "phpunit/phpunit": "^12.5.12",
-        "symfony/panther": "^2.4"
+        "symfony/panther": "^2.4",
+        "symfony/yaml": "^8.1"
     },
     "autoload": {
         "psr-4": {
