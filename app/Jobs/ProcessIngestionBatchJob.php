@@ -66,6 +66,8 @@ class ProcessIngestionBatchJob implements ShouldQueue
                     'region' => $item['location']['region'] ?? null,
                     'city' => $item['location']['city'] ?? null,
                     'source_published_at' => $item['published_at'] ?? null,
+                    'content_hash' => $item['content_hash'] ?? null,
+
                 ));
 
                 $ingestionService->ingest($dto);

@@ -29,11 +29,19 @@ class ParserClient extends Model implements AuthenticatableContract
         'last_seen_at',
         'parser_version',
         'allowed_source_ids',
+        'hostname_hash',
+        'queue_size',
+        'last_run_at',
+        'last_heartbeat_at',
+        'allowed_source_ids',
         );
 
     protected $casts = array(
         'is_active' => 'boolean',
         'last_seen_at' => 'datetime',
+        'queue_size' => 'integer',
+        'last_run_at' => 'datetime',
+        'last_heartbeat_at' => 'datetime',
         'allowed_source_ids' => 'array',
     );
 

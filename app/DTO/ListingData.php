@@ -27,6 +27,8 @@ final class ListingData
         // o'sha holatda har doim brandRaw/modelRaw orqali alias izlanadi.
         public readonly ?int $knownBrandId = null,
         public readonly ?int $knownModelId = null,
+        public readonly ?string $contentHash = null,
+
     ) {
     }
 
@@ -48,6 +50,8 @@ final class ListingData
             sourcePublishedAt: isset($data['source_published_at']) ? new \DateTimeImmutable($data['source_published_at']) : null,
             knownBrandId: isset($data['known_brand_id']) ? (int) $data['known_brand_id'] : null,
             knownModelId: isset($data['known_model_id']) ? (int) $data['known_model_id'] : null,
+            contentHash: isset($data['content_hash']) && $data['content_hash'] !== null ? (string) $data['content_hash'] : null,
+
         );
     }
 

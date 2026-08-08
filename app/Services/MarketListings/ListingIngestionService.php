@@ -9,6 +9,7 @@ use App\Models\ListingPriceSnapshot;
 use App\Models\MarketListing;
 use App\Services\Catalog\CatalogAliasService;
 use App\Services\ExchangeRates\ExchangeRateService;
+use Illuminate\Support\Facades\DB;
 
 class ListingIngestionService
 {
@@ -27,23 +28,15 @@ class ListingIngestionService
 
     public function ingest(ListingData $data): MarketListing
     {
-        $contentHash = $data->computeContentHash();
+        // TZ 19: parser bergan content_hash (ContentHashBuilder) ishlatiladi;
+        // faqat berilmagan holatda backend o'zi hisoblaydi (zaxira).
+        $contentHash = $data->contentHash ?? $data->computeContentHash();
 
         $listing = MarketListing::query()
             ->where('source_id', $data->sourceId)
             ->where('external_id', $data->externalId)
             ->first();
 
-        // Agar parser (masalan OlxUzAdapter) ParserTarget orqali qaysi
-        // brand/model ekanini ALLAQACHON aniq bilsa — shu ID'lar to'g'ridan-to'g'ri
-        // ishlatiladi, alias jadvali orqali nomga qarab qayta izlanmaydi. Bu —
-        // brand/model nomi keyinchalik (admin tomonidan) o'zgartirilsa ham
-        // moslikning buzilmasligini kafolatlaydi, chunki target'ning o'zi
-        // "haqiqat manbai" hisoblanadi.
-        //
-        // Agar bu ID'lar berilmagan bo'lsa (masalan tashqi HTTP Ingestion API
-        // orqali kelgan, parser bizning ichki ID'larimizni bilmaydigan holat) —
-        // avvalgidek brandRaw/modelRaw nomi orqali alias jadvalida izlanadi.
         if ($data->knownBrandId !== null && $data->knownModelId !== null) {
             $brandId = $data->knownBrandId;
             $modelId = $data->knownModelId;
@@ -61,13 +54,16 @@ class ListingIngestionService
 
         $priceUzs = $this->exchangeRateService->convertToUzs($data->priceAmount, $data->currency);
 
-        // Himoya qatlami (TZ: "aniq bo'lmasa, olinmasin"): bu yerga qaysi yo'l
-        // orqali kelishidan qat'i nazar (ichki scraper yoki tashqi HTTP
-        // ingestion API) — OLX fallback natijalari yoki mashina uchun aqlga
-        // sig'maydigan narxdagi elementlar bazaga UMUMAN yozilmaydi.
-        // priceUzs hisoblab bo'lmagan holatda (masalan kurs topilmadi) narx
-        // tekshiruvi o'tkazib yuboriladi — bu boshqa (currency) xatosi sifatida
-        // yuqorida allaqachon ko'rib chiqiladi.
+        // TZ: UZS bo'lmagan valyutada kurs topilmasa, narxni UZS'ga aylantirib
+        // bo'lmaydi — element jimgina qabul qilinmaydi, balki rad etiladi.
+        if ($data->currency !== 'UZS' && $priceUzs === null) {
+            throw new SuspiciousListingRejectedException(
+                'currency_conversion_failed',
+                "Valyuta '{$data->currency}' uchun kurs topilmadi — narxni UZS'ga aylantirib bo'lmadi.",
+            );
+        }
+
+        // Himoya qatlami (TZ: "aniq bo'lmasa, olinmasin").
         $suspiciousReason = $this->sanityChecker->check($data->canonicalUrl, $priceUzs);
 
         if ($suspiciousReason !== null) {
@@ -89,54 +85,45 @@ class ListingIngestionService
             'seller_type' => $data->sellerType,
             'region' => $data->region,
             'city' => $data->city,
-            // E'lon qayta ko'rilganda har doim qayta "active" qilinadi — agar u
-            // avval missing_runs sabab inactive bo'lib qolgan bo'lsa-yu, keyingi
-            // safar sahifada yana paydo bo'lsa (masalan e'lon vaqtincha
-            // ko'rinmay qolgan bo'lsa), tabiiy ravishda qaytadan faollashadi.
             'status' => 'active',
             'content_hash' => $contentHash,
             'source_published_at' => $data->sourcePublishedAt,
             'last_seen_at' => now(),
         );
 
-        if ($listing === null) {
-            $listing = MarketListing::create(array_merge($attributes, array(
-                'source_id' => $data->sourceId,
-                'external_id' => $data->externalId,
-                'first_seen_at' => now(),
-                'missing_runs' => 0,
-            )));
+        // TZ: e'lon yozuvi va uning snapshot'i bitta tranzaksiyada — biri
+        // saqlanib, ikkinchisi yiqilib qolmasligi uchun (mustahkamlik).
+        return DB::transaction(function () use ($listing, $attributes, $contentHash, $data) {
+            if ($listing === null) {
+                $listing = MarketListing::create(array_merge($attributes, array(
+                    'source_id' => $data->sourceId,
+                    'external_id' => $data->externalId,
+                    'first_seen_at' => now(),
+                    'missing_runs' => 0,
+                )));
 
+                $this->recordSnapshot($listing, $contentHash);
+
+                return $listing;
+            }
+
+            if ($listing->content_hash === $contentHash) {
+                $listing->update(array('last_seen_at' => now(), 'missing_runs' => 0, 'status' => 'active'));
+
+                return $listing;
+            }
+
+            $listing->update(array_merge($attributes, array('missing_runs' => 0)));
             $this->recordSnapshot($listing, $contentHash);
 
-            return $listing;
-        }
-
-        if ($listing->content_hash === $contentHash) {
-            $listing->update(array('last_seen_at' => now(), 'missing_runs' => 0, 'status' => 'active'));
-
-            return $listing;
-        }
-
-        $listing->update(array_merge($attributes, array('missing_runs' => 0)));
-        $this->recordSnapshot($listing, $contentHash);
-
-        return $listing->refresh();
+            return $listing->refresh();
+        });
     }
 
     /**
-     * TZ bo'lim 12 ("Snapshot"): bitta target (brend+model sahifasi) to'liq va
-     * muvaffaqiyatli qayta ko'rib chiqilgandan keyin chaqiriladi. Shu safar
-     * sahifada KO'RILMAGAN, lekin bazada hali "active" turgan e'lonlarning
-     * missing_runs sonini +1 qiladi, MAX_MISSING_RUNS'ga yetganda inactive
-     * qiladi.
+     * TZ bo'lim 12 ("Snapshot"): target to'liq ko'rilgandan keyin chaqiriladi.
      *
-     * Faqat target run TO'LIQ muvaffaqiyatli tugaganda chaqirilishi kerak —
-     * xato/bloklangan/qisman natijalarda hech narsani deaktivatsiya qilmaslik
-     * kerak (TZ: "failed yoki partial batch yozuvlarni deaktivatsiya qilmaydi").
-     *
-     * @param  array<int, string>  $seenExternalIds  Shu safar sahifada haqiqatan
-     *                                                topilgan e'lonlarning external_id'lari.
+     * @param  array<int, string>  $seenExternalIds
      */
     public function markMissingForModel(int $sourceId, int $modelId, array $seenExternalIds): void
     {
