@@ -108,6 +108,10 @@ class RunParserTargetsChunkJob implements ShouldQueue
 
             $ingestedCount = 0;
             $rejectedCount = 0;
+            // Kutilgan filtrlash (mismatch/fallback) jurnalni to'ldirmasligi uchun
+            // har bir target uchun faqat bir nechta namuna yoziladi.
+            $fallbackLogged = 0;
+            $mismatchLogged = 0;
             $seenExternalIds = array();
 
             foreach ($results as $result) {
@@ -121,7 +125,7 @@ class RunParserTargetsChunkJob implements ShouldQueue
                     $titleRaw = $result['title_raw'] ?? null;
                     $canonicalUrl = $result['canonical_url'] ?? null;
 
-                    if ($result['rejected_reason'] === 'olx_fallback_result') {
+                    if ($result['rejected_reason'] === 'olx_fallback_result' && $fallbackLogged < 3) {
                         ParserRejectionLog::create(array(
                             'source_id' => $target->source_id,
                             'brand_raw' => $target->brand->name,
@@ -133,9 +137,11 @@ class RunParserTargetsChunkJob implements ShouldQueue
                                 . "natijasi — parser darajasida rad etildi (target: {$target->brand->name} {$target->carModel->name}).",
                             'rejected_at' => now(),
                         ));
+
+                        $fallbackLogged++;
                     }
 
-                    if ($result['rejected_reason'] === 'title_model_mismatch') {
+                    if ($result['rejected_reason'] === 'title_model_mismatch' && $mismatchLogged < 3) {
                         ParserRejectionLog::create(array(
                             'source_id' => $target->source_id,
                             'brand_raw' => $target->brand->name,
@@ -147,6 +153,8 @@ class RunParserTargetsChunkJob implements ShouldQueue
                                 . "boshqa model ko'rsatdi (target: {$target->brand->name} {$target->carModel->name}).",
                             'rejected_at' => now(),
                         ));
+
+                        $mismatchLogged++;
                     }
 
                     continue;
