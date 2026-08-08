@@ -13,10 +13,11 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'role'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
+
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, \Laravel\Fortify\TwoFactorAuthenticatable;
 
     protected function casts(): array
     {
@@ -37,11 +38,6 @@ class User extends Authenticatable implements FilamentUser
         return in_array($this->role, array(UserRole::Administrator, UserRole::ContentEditor), true);
     }
 
-    /**
-     * Faqat Administrator va Content Editor admin panelga kira oladi —
-     * boshqa (masalan oddiy) foydalanuvchilar bo'lsa ham, panel ularga
-     * yopiq bo'ladi.
-     */
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->isContentEditor();

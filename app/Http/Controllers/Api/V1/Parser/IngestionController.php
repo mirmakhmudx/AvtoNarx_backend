@@ -329,7 +329,28 @@ class IngestionController extends Controller
             return response()->json(array('message' => 'Autentifikatsiya talab qilinadi.'), 401);
         }
 
-        $client->touchLastSeen();
+        // TZ 8.5: parser holatini qabul qilamiz (barcha maydonlar ixtiyoriy).
+        $validated = $request->validate(array(
+            'parser_version' => array('nullable', 'string', 'max:50'),
+            'hostname_hash' => array('nullable', 'string', 'max:64'),
+            'queue_size' => array('nullable', 'integer', 'min:0'),
+            'last_run_at' => array('nullable', 'date'),
+        ));
+
+        $updates = array_filter(
+            array(
+                'parser_version' => $validated['parser_version'] ?? null,
+                'hostname_hash' => $validated['hostname_hash'] ?? null,
+                'queue_size' => $validated['queue_size'] ?? null,
+                'last_run_at' => $validated['last_run_at'] ?? null,
+            ),
+            fn ($value) => $value !== null,
+        );
+
+        $updates['last_heartbeat_at'] = now();
+        $updates['last_seen_at'] = now();
+
+        $client->forceFill($updates)->save();
 
         return response()->json(array('message' => 'ok', 'server_time' => now()->toIso8601String()));
     }

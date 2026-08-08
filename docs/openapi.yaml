@@ -1,0 +1,686 @@
+openapi: 3.1.0
+
+info:
+  title: AvtoNarx Backend API
+  version: "1.0.0"
+  description: |
+    AvtoNarx backend — avtomobil bozor narxlari (ikkilamchi bozor medianasi) va
+    rasmiy narxlar API'si.
+
+    ## Autentifikatsiya
+    - **Public API** — autentifikatsiyasiz.
+    - **Ingestion API** (parser uchun) — `Authorization: Bearer <token>` (Laravel Sanctum).
+
+    ## Rate limiting (TZ 13)
+    - Public: **120 so'rov/daqiqa/IP**.
+    - Ingestion: **30 so'rov/daqiqa/token**.
+    - Chegara oshsa `429 Too Many Requests`.
+
+    ## Idempotentlik (TZ 9)
+    Batch yuborishda `Idempotency-Key` (UUID) sarlavhasi majburiy. Bir xil
+    `batch_id` + bir xil tarkib qayta yuborilsa avvalgi natija qaytariladi;
+    bir xil `batch_id` boshqa tarkib bilan yuborilsa `409` qaytariladi.
+
+    ## Katta payloadlar (TZ 8.1)
+    Parser katta batchlarni `Content-Encoding: gzip` bilan yuborishi mumkin —
+    backend uni ochadi.
+
+servers:
+  - url: /
+    description: Joriy host
+
+tags:
+  - name: Public
+    description: Frontend uchun ochiq (autentifikatsiyasiz) endpointlar.
+  - name: Ingestion
+    description: Parser uchun ma'lumot yuklash endpointlari (Bearer token).
+  - name: Health
+    description: Sog'liq va tayyorlik endpointlari (TZ 20).
+
+security: []
+
+paths:
+
+  /api/v1/brands:
+    get:
+      tags: [Public]
+      summary: Faol markalar ro'yxati
+      responses:
+        "200":
+          description: Markalar ro'yxati
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Brand" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/brands/{slug}:
+    get:
+      tags: [Public]
+      summary: Bitta markani slug bo'yicha olish
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Marka
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Brand" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/brands/{brandSlug}/models:
+    get:
+      tags: [Public]
+      summary: Marka modellari (rasmiy va bozor narxi bilan), sahifalangan
+      parameters:
+        - name: brandSlug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Modellar ro'yxati
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/CarModel" }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/models/{carModel}/prices:
+    get:
+      tags: [Public]
+      summary: Model bo'yicha yillik bozor narxlari va rasmiy narx
+      parameters:
+        - name: carModel
+          in: path
+          required: true
+          description: Model ID'si
+          schema: { type: integer }
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: region
+          in: query
+          required: false
+          description: Hudud kodi (masalan `tashkent`). Berilmasa — butun mamlakat.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Narx statistikasi
+          headers:
+            ETag:
+              schema: { type: string }
+            Last-Modified:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelPrices" }
+        "304":
+          description: O'zgarmagan (If-None-Match mos keldi)
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/filters:
+    get:
+      tags: [Public]
+      summary: Filtr qiymatlari (yillar, hududlar)
+      parameters:
+        - name: brand
+          in: query
+          required: false
+          description: Marka slug'i bo'yicha filtrlarni cheklash
+          schema: { type: string }
+      responses:
+        "200":
+          description: Filtr qiymatlari
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      brand:
+                        oneOf:
+                          - type: "null"
+                          - type: object
+                            properties:
+                              id: { type: integer }
+                              slug: { type: string }
+                              name: { type: string }
+                      years:
+                        type: array
+                        items: { type: integer }
+                      regions:
+                        type: array
+                        items: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/ingestion/market-listings/batches:
+    post:
+      tags: [Ingestion]
+      summary: Bozor e'lonlari batch'ini yuborish
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MarketListingBatch" }
+      responses:
+        "202": { $ref: "#/components/responses/BatchAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/ingestion/official-offers/batches:
+    post:
+      tags: [Ingestion]
+      summary: Rasmiy takliflar batch'ini yuborish
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OfficialOfferBatch" }
+      responses:
+        "202": { $ref: "#/components/responses/BatchAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/ingestion/batches/{batchId}:
+    get:
+      tags: [Ingestion]
+      summary: Batch holati va (birinchi 20 ta) xatolari
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Batch holati
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/BatchStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/ingestion/batches/{batchId}/errors:
+    get:
+      tags: [Ingestion]
+      summary: Batch item xatolari (sahifalangan)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Xatolarning sahifalangan ro'yxati (Laravel paginator)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ItemError" }
+                  current_page: { type: integer }
+                  per_page: { type: integer }
+                  total: { type: integer }
+                  last_page: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/ingestion/heartbeat:
+    post:
+      tags: [Ingestion]
+      summary: Parser "tirik" signali (last_seen_at yangilanadi)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, examples: ["ok"] }
+                  server_time: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/ingestion/catalog:
+    get:
+      tags: [Ingestion]
+      summary: Faol markalar/modellar katalogi (parser normalizatsiyasi uchun)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Katalog
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      brands:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+                            slug: { type: string }
+                      models:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            brand_id: { type: integer }
+                            name: { type: string }
+                            slug: { type: string }
+                      catalog_version: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /up:
+    get:
+      tags: [Health]
+      summary: Liveness (Laravel standarti)
+      responses:
+        "200":
+          description: Ilova ishlayapti
+
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Liveness — jarayon tirikmi (bog'liqliksiz)
+      responses:
+        "200":
+          description: Tirik
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, examples: ["alive"] }
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness — DB va cache tekshiruvi
+      responses:
+        "200":
+          description: Tayyor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReadinessStatus" }
+        "503":
+          description: Tayyor emas (biror bog'liqlik yiqilgan)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReadinessStatus" }
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Laravel Sanctum shaxsiy access token'i.
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Batch uchun idempotentlik kaliti (UUID).
+      schema: { type: string, format: uuid }
+
+  schemas:
+
+    Brand:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        country_code:
+          oneOf:
+            - type: "null"
+            - type: string
+        models_count:
+          type: integer
+          description: Faqat carModels soni yuklangan bo'lsa mavjud.
+
+    CarModel:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        production_from:
+          oneOf: [{ type: "null" }, { type: integer }]
+        production_to:
+          oneOf: [{ type: "null" }, { type: integer }]
+        official_price: { $ref: "#/components/schemas/OfficialPrice" }
+        market_price: { $ref: "#/components/schemas/MarketPrice" }
+
+    OfficialPrice:
+      description: Rasmiy narx yoki null.
+      oneOf:
+        - type: "null"
+        - type: object
+          properties:
+            amount: { type: integer }
+            currency: { type: string, examples: ["UZS"] }
+            observed_at:
+              oneOf: [{ type: "null" }, { type: string, format: date-time }]
+            source_url:
+              oneOf: [{ type: "null" }, { type: string }]
+
+    MarketPrice:
+      description: Vakil bozor narxi (mediana) yoki null.
+      oneOf:
+        - type: "null"
+        - type: object
+          properties:
+            amount: { type: integer }
+            currency: { type: string, examples: ["UZS"] }
+            statistic: { type: string, examples: ["median"] }
+            sample_size: { type: integer }
+            period_to:
+              oneOf: [{ type: "null" }, { type: string, format: date-time }]
+            method_version: { type: string }
+
+    ModelPrices:
+      type: object
+      properties:
+        model_id: { type: integer }
+        model_name: { type: string }
+        region:
+          oneOf: [{ type: "null" }, { type: string }]
+        official_price: { $ref: "#/components/schemas/OfficialPrice" }
+        market_prices:
+          type: array
+          items: { $ref: "#/components/schemas/MarketPricesEntry" }
+
+    MarketPricesEntry:
+      description: Bir yil bo'yicha statistika (ok) yoki yetarli emas holati.
+      oneOf:
+        - type: object
+          title: OK
+          properties:
+            year:
+              oneOf: [{ type: "null" }, { type: integer }]
+            status: { type: string, examples: ["ok"] }
+            currency: { type: string }
+            sample_size: { type: integer }
+            excluded_count: { type: integer }
+            median_uzs: { type: integer }
+            mean_uzs: { type: integer }
+            min_uzs: { type: integer }
+            max_uzs: { type: integer }
+            p25_uzs: { type: integer }
+            p75_uzs: { type: integer }
+            method_version: { type: string }
+            calculated_at:
+              oneOf: [{ type: "null" }, { type: string, format: date-time }]
+        - type: object
+          title: Insufficient
+          properties:
+            year:
+              oneOf: [{ type: "null" }, { type: integer }]
+            status: { type: string, examples: ["insufficient_sample", "no_data"] }
+            sample_size: { type: integer }
+            min_required: { type: integer }
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        last_page: { type: integer }
+
+    MarketListingBatch:
+      type: object
+      required: [batch_id, source, mode, collected_at, items]
+      properties:
+        batch_id: { type: string, format: uuid }
+        source: { type: string, description: "Manba kodi (sources.code)." }
+        mode: { type: string, enum: [incremental, snapshot, offline_html] }
+        parser_version: { type: string, maxLength: 50 }
+        collected_at: { type: string, format: date-time }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: "#/components/schemas/MarketListingItem" }
+
+    MarketListingItem:
+      type: object
+      required: [external_id, url, brand, model, year, price, observed_at, content_hash]
+      properties:
+        external_id: { type: string, maxLength: 255 }
+        url: { type: string, format: uri, maxLength: 1000, description: "Manba domeniga tegishli bo'lishi shart." }
+        brand: { type: string, maxLength: 180 }
+        model: { type: string, maxLength: 180 }
+        year: { type: integer, minimum: 1950, description: "Yuqori chegara: joriy yil + 1." }
+        price: { $ref: "#/components/schemas/Price" }
+        condition: { type: string, enum: [new, used, unknown] }
+        seller_type: { type: string }
+        location:
+          type: object
+          properties:
+            region: { type: string, maxLength: 180 }
+            city: { type: string, maxLength: 180 }
+        observed_at: { type: string, format: date-time }
+        published_at: { type: string, format: date-time }
+        content_hash: { type: string, pattern: "^[0-9a-fA-F]{64}$", description: "SHA-256 (64 hex)." }
+
+    OfficialOfferBatch:
+      type: object
+      required: [batch_id, source, mode, collected_at, items]
+      properties:
+        batch_id: { type: string, format: uuid }
+        source: { type: string }
+        mode: { type: string, enum: [incremental, snapshot, offline_html] }
+        parser_version: { type: string, maxLength: 50 }
+        collected_at: { type: string, format: date-time }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: "#/components/schemas/OfficialOfferItem" }
+
+    OfficialOfferItem:
+      type: object
+      required: [external_id, url, brand, model, price, observed_at, content_hash]
+      properties:
+        external_id: { type: string, maxLength: 255 }
+        url: { type: string, maxLength: 1000 }
+        brand: { type: string, maxLength: 180 }
+        model: { type: string, maxLength: 180 }
+        trim: { type: string, maxLength: 180 }
+        year: { type: integer, minimum: 1950 }
+        price: { $ref: "#/components/schemas/Price" }
+        observed_at: { type: string, format: date-time }
+        valid_from: { type: string, format: date-time }
+        valid_to: { type: string, format: date-time }
+        content_hash: { type: string, minLength: 64, maxLength: 64 }
+
+    Price:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: integer, minimum: 1, description: "Butun son (tiyin emas, so'm)." }
+        currency: { type: string, enum: [UZS, USD] }
+
+    BatchAcceptedBody:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            batch_id: { type: string, format: uuid }
+            status: { type: string, examples: ["received"] }
+            items_total: { type: integer }
+            status_url: { type: string }
+        meta:
+          type: object
+          properties:
+            request_id: { type: string, format: uuid }
+            note: { type: string, description: "Idempotent takror so'rovda mavjud." }
+
+    BatchStatus:
+      type: object
+      properties:
+        batch_id: { type: string, format: uuid }
+        dataset: { type: string }
+        status: { type: string, examples: ["received", "processing", "completed", "failed"] }
+        items_total: { type: integer }
+        items_accepted: { type: integer }
+        items_rejected: { type: integer }
+        errors:
+          type: array
+          items: { $ref: "#/components/schemas/ItemError" }
+        completed_at:
+          oneOf: [{ type: "null" }, { type: string, format: date-time }]
+
+    ItemError:
+      type: object
+      properties:
+        item_index: { type: integer }
+        external_id:
+          oneOf: [{ type: "null" }, { type: string }]
+        code: { type: string, examples: ["invalid_year", "unmatched_brand", "implausible_price"] }
+        field:
+          oneOf: [{ type: "null" }, { type: string }]
+        message: { type: string }
+
+    ReadinessStatus:
+      type: object
+      properties:
+        status: { type: string, examples: ["ready", "not_ready"] }
+        checks:
+          type: object
+          properties:
+            database: { type: string, examples: ["ok", "fail"] }
+            cache: { type: string, examples: ["ok", "fail"] }
+
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: string }
+
+    ValidationError:
+      type: object
+      properties:
+        message: { type: string }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+
+  responses:
+
+    BatchAccepted:
+      description: Batch qabul qilindi (yoki idempotent takror)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/BatchAcceptedBody" }
+
+    Unauthorized:
+      description: Autentifikatsiya talab qilinadi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+    Forbidden:
+      description: Ruxsat yo'q (client faol emas / manbaga ruxsat yo'q / begona batch)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+    NotFound:
+      description: Topilmadi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+    Conflict:
+      description: duplicate_batch_conflict — bir xil batch_id boshqa tarkib/client bilan
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+    ValidationFailed:
+      description: Validatsiya xatosi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ValidationError" }
+
+    TooManyRequests:
+      description: Rate limit oshdi (TZ 13)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

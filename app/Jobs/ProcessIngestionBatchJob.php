@@ -20,6 +20,7 @@ class ProcessIngestionBatchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+
     public int $tries = 3;
     public int $backoff = 10;
 
@@ -27,6 +28,7 @@ class ProcessIngestionBatchJob implements ShouldQueue
         private readonly string $batchId,
         private readonly array $items,
     ) {
+        $this->onQueue('ingestion');
     }
 
     public function handle(ListingIngestionService $ingestionService): void
@@ -64,6 +66,8 @@ class ProcessIngestionBatchJob implements ShouldQueue
                     'region' => $item['location']['region'] ?? null,
                     'city' => $item['location']['city'] ?? null,
                     'source_published_at' => $item['published_at'] ?? null,
+                    'content_hash' => $item['content_hash'] ?? null,
+
                 ));
 
                 $ingestionService->ingest($dto);
@@ -144,5 +148,18 @@ class ProcessIngestionBatchJob implements ShouldQueue
             'exception' => $e::class,
             'message' => $e->getMessage(),
         ));
+
+        // TZ 4: Sentry o'rnatilgan bo'lsa, xatoni batch konteksti bilan
+        // yuboramiz. function_exists — paket yo'q bo'lsa xatosiz o'tkazadi;
+        // DSN sozlanmagan bo'lsa captureException xavfsiz no-op bo'ladi.
+        if (function_exists('Sentry\captureException')) {
+            $batchId = $this->batchId;
+
+            \Sentry\configureScope(function ($scope) use ($batchId) {
+                $scope->setContext('ingestion_batch', array('batch_id' => $batchId));
+            });
+
+            \Sentry\captureException($e);
+        }
     }
 }

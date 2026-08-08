@@ -8,16 +8,20 @@
     "require": {
         "php": "^8.3",
         "filament/filament": "^3.2",
+        "laravel/fortify": "^1.37",
         "laravel/framework": "^13.8",
+        "laravel/horizon": "^5.48",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "predis/predis": "^3.5",
+        "sentry/sentry-laravel": "^4.27",
         "spekulatius/phpscraper": "^3.0",
         "symfony/console": "^7.4.14",
         "symfony/error-handler": "^7.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.10",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
@@ -50,6 +54,8 @@
             "npm install --ignore-scripts",
             "npm run build"
         ],
+        "analyse": "phpstan analyse --memory-limit=512M",
+
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
@@ -92,6 +98,7 @@
             "php-http/discovery": true
         }
     },
+
     "minimum-stability": "stable",
     "prefer-stable": true
 }
