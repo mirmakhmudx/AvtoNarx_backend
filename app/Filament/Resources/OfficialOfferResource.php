@@ -87,10 +87,11 @@ class OfficialOfferResource extends Resource
 
                         Forms\Components\Select::make('year')
                             ->label('Yil')
-                            ->options(array_combine(
-                                range((int) date('Y') + 1, 1950),
-                                range((int) date('Y') + 1, 1950),
-                            ))
+                            ->options(function (): array {
+                                $years = range((int) date('Y') + 1, 1950);
+
+                                return array_combine($years, $years);
+                            })
                             ->searchable()
                             ->native(false),
 

@@ -49,8 +49,7 @@ final class ListingData
             sourcePublishedAt: isset($data['source_published_at']) ? new \DateTimeImmutable($data['source_published_at']) : null,
             knownBrandId: isset($data['known_brand_id']) ? (int) $data['known_brand_id'] : null,
             knownModelId: isset($data['known_model_id']) ? (int) $data['known_model_id'] : null,
-            contentHash: isset($data['content_hash']) && $data['content_hash'] !== null ? (string) $data['content_hash'] : null,
-
+            contentHash: isset($data['content_hash']) ? (string) $data['content_hash'] : null,
         );
     }
 
