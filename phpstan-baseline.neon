@@ -1,0 +1,385 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Console/Commands/CheckParserTargetUrlsCommand.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/MarketListingResource.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Filament/Resources/MarketListingResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$external_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$field\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$item_index\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:isAllowedSource\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:touchLastSeen\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Api/V1/Parser/IngestionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\BrandResource\:\:\$country_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/BrandResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\BrandResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/BrandResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\BrandResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/BrandResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\BrandResource\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/BrandResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\CarModelResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/CarModelResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\CarModelResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/CarModelResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\CarModelResource\:\:\$production_from\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/CarModelResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\CarModelResource\:\:\$production_to\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/CarModelResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Catalog\\CarModelResource\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Catalog/CarModelResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$brand_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$model_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$price_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$publication_status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$published_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$source_url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$trim_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$valid_from\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$valid_to\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$verified_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OfficialOffers\\OfficialOfferResource\:\:\$year\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OfficialOffers/OfficialOfferResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$brand_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$calculated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$excluded_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$max_price_uzs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$mean_price_uzs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$median_price_uzs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$method_version\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$min_price_uzs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$model_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$p25_price_uzs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$p75_price_uzs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$region_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$sample_size\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PriceStatistics\\PriceResource\:\:\$year\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PriceStatistics/PriceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$brand_name_raw\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$discovered_url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$first_seen_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$last_seen_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$model_name_raw\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$source\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UnmatchedCandidates\\UnmatchedCandidateResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UnmatchedCandidates/UnmatchedCandidateResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 14
+			path: app/Jobs/RunParserTargetsChunkJob.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Catalog/CarModelService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/Parser/Adapters/OlxUzAdapter.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\UnmatchedBrandModelCandidate\:\:\$brand\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Parser/UnmatchedCandidateService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\UnmatchedBrandModelCandidate\:\:\$count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Parser/UnmatchedCandidateService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\UnmatchedBrandModelCandidate\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/Parser/UnmatchedCandidateService.php

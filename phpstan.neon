@@ -1,0 +1,22 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - app
+
+    excludePaths:
+        - app/Filament/*/Pages/*
+
+    # PHPDoc'dan kelib chiqqan "har doim true/false" xabarlarini o'chiramiz —
+    # ular ko'pincha Eloquent/Sanctum tip modellashuvidan kelib chiqadi
+    # (masalan ingestion guard'i ParserClient qaytaradi, lekin tip User deydi).
+    treatPhpDocTypesAsCertain: false
+
+    ignoreErrors: []
+
+    checkModelProperties: false
+    reportUnmatchedIgnoredErrors: false
