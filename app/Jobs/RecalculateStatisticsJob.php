@@ -15,8 +15,14 @@ class RecalculateStatisticsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+
     public int $tries = 1;
     public int $timeout = 600;
+
+    public function __construct()
+    {
+        $this->onQueue('statistics');
+    }
 
     public function middleware(): array
     {

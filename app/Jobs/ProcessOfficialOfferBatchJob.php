@@ -17,6 +17,7 @@ class ProcessOfficialOfferBatchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+
     public int $tries = 3;
     public int $backoff = 10;
 
@@ -24,6 +25,7 @@ class ProcessOfficialOfferBatchJob implements ShouldQueue
         private readonly string $batchId,
         private readonly array $items,
     ) {
+        $this->onQueue('ingestion');
     }
 
     public function handle(OfficialOfferIngestionService $ingestionService): void

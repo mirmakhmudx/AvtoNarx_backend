@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CarModel extends Model
 {
+    use \App\Models\Concerns\Auditable;
     protected $table = 'car_models';
 
     protected $fillable = [

@@ -15,5 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // TZ 4: Sentry'ga xatolarni yuborish. Paket o'rnatilmagan bo'lsa ham
+        // ilova ishlashi uchun mavjudligini tekshiramiz (class_exists).
+        if (class_exists(\Sentry\Laravel\Integration::class)) {
+            \Sentry\Laravel\Integration::handles($exceptions);
+        }
     })->create();
