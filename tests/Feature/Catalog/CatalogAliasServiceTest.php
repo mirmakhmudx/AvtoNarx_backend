@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->source = Source::create(array(
+    $this->source = Source::create([
         'code' => 'olx_uz',
         'name' => 'OLX.uz',
         'type' => 'marketplace',
@@ -18,10 +18,10 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'unverified',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
+    $this->brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
 
     $this->service = app(CatalogAliasService::class);
 });
@@ -51,7 +51,7 @@ it('falls back to a global (source_id null) verified alias when no source-specif
 });
 
 it('prefers a source-specific alias over a global one when both exist for the same raw name', function () {
-    $otherBrand = Brand::create(array('name' => 'Other', 'slug' => 'other', 'is_active' => true, 'sort_order' => 2));
+    $otherBrand = Brand::create(['name' => 'Other', 'slug' => 'other', 'is_active' => true, 'sort_order' => 2]);
 
     $global = $this->service->createPendingAlias(EntityType::Brand, $otherBrand->id, 'Chevrolet', null);
     $this->service->verify($global);

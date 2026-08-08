@@ -1,7 +1,7 @@
 <?php
- 
+
 namespace App\Models;
- 
+
 use App\Enums\ConditionType;
 use App\Enums\Currency;
 use App\Enums\ListingStatus;
@@ -10,10 +10,10 @@ use App\Enums\SellerType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
- 
+
 class MarketListing extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'source_id',
         'external_id',
         'canonical_url',
@@ -38,9 +38,9 @@ class MarketListing extends Model
         'first_seen_at',
         'last_seen_at',
         'missing_runs',
-    );
- 
-    protected $casts = array(
+    ];
+
+    protected $casts = [
         'currency' => Currency::class,
         'condition' => ConditionType::class,
         'seller_type' => SellerType::class,
@@ -54,38 +54,38 @@ class MarketListing extends Model
         'source_published_at' => 'datetime',
         'first_seen_at' => 'datetime',
         'last_seen_at' => 'datetime',
-    );
- 
+    ];
+
     public function source(): BelongsTo
     {
         return $this->belongsTo(Source::class);
     }
- 
+
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
     }
- 
+
     public function carModel(): BelongsTo
     {
         return $this->belongsTo(CarModel::class, 'model_id');
     }
- 
+
     public function priceSnapshots(): HasMany
     {
         return $this->hasMany(ListingPriceSnapshot::class);
     }
- 
+
     public function scopeActive($query)
     {
         return $query->where('status', ListingStatus::Active->value);
     }
- 
+
     public function scopeMatched($query)
     {
         return $query->where('normalization_status', NormalizationStatus::Matched->value);
     }
- 
+
     /**
      * TZ 11-bo'lim: tanlanmaga "last_seen_at 72 soatdan eski bo'lmagan"
      * e'lonlar kiradi. Bu scope statistikani hisoblashda BEVOSITA freshness
@@ -94,10 +94,10 @@ class MarketListing extends Model
     public function scopeFreshForStatistics($query)
     {
         $hours = (int) config('market_statistics.sample_max_age_hours', 72);
- 
+
         return $query->where('last_seen_at', '>=', now()->subHours($hours));
     }
- 
+
     /**
      * TZ 11-bo'lim: tanlanma — "used yoki tasdiqlangan unknown". Yangi ('new')
      * mashinalar ikkilamchi bozor medianasiga kirmasligi kerak (ular
@@ -106,8 +106,8 @@ class MarketListing extends Model
      */
     public function scopeSecondaryMarket($query)
     {
-        $conditions = config('market_statistics.included_conditions', array('used', 'unknown'));
- 
+        $conditions = config('market_statistics.included_conditions', ['used', 'unknown']);
+
         return $query->whereIn('condition', $conditions);
     }
 }

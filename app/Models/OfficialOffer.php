@@ -4,14 +4,15 @@ namespace App\Models;
 
 use App\Enums\Currency;
 use App\Enums\OfferStatus;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OfficialOffer extends Model
 {
-    use \App\Models\Concerns\Auditable;
+    use Auditable;
 
-    protected $fillable = array(
+    protected $fillable = [
         'source_id',
         'brand_id',
         'model_id',
@@ -30,9 +31,9 @@ class OfficialOffer extends Model
         'verified_at',
         'verified_by',
         'content_hash',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'currency' => Currency::class,
         'publication_status' => OfferStatus::class,
         'year' => 'integer',
@@ -43,7 +44,7 @@ class OfficialOffer extends Model
         'observed_at' => 'datetime',
         'published_at' => 'datetime',
         'verified_at' => 'datetime',
-    );
+    ];
 
     public function source(): BelongsTo
     {

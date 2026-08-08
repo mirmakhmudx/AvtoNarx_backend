@@ -24,7 +24,6 @@ class MarketPriceStatisticResource extends Resource
 
     protected static ?int $navigationSort = 9;
 
-  
     public static function canCreate(): bool
     {
         return false;

@@ -11,6 +11,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class MarketListingResource extends Resource
 {
@@ -82,7 +84,7 @@ class MarketListingResource extends Resource
                             ->relationship(
                                 name: 'carModel',
                                 titleAttribute: 'name',
-                                modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query, Forms\Get $get) => $get('brand_id')
+                                modifyQueryUsing: fn (Builder $query, Forms\Get $get) => $get('brand_id')
                                     ? $query->where('brand_id', $get('brand_id'))
                                     : $query,
                             )
@@ -241,7 +243,7 @@ class MarketListingResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(fn (\Illuminate\Support\Collection $records) => $records->each->update(['status' => 'removed']))
+                    ->action(fn (Collection $records) => $records->each->update(['status' => 'removed']))
                     ->deselectRecordsAfterCompletion(),
             ]);
     }

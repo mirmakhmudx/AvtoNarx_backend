@@ -20,8 +20,8 @@ class ProcessIngestionBatchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-
     public int $tries = 3;
+
     public int $backoff = 10;
 
     public function __construct(
@@ -39,7 +39,7 @@ class ProcessIngestionBatchJob implements ShouldQueue
             return;
         }
 
-        $batch->update(array('status' => 'processing'));
+        $batch->update(['status' => 'processing']);
 
         // Retry'ga chidamlilik: job qayta ishga tushsa (tries=3), avvalgi
         // urinishda yozilgan item xatolari takrorlanmasligi uchun ularni
@@ -52,7 +52,7 @@ class ProcessIngestionBatchJob implements ShouldQueue
 
         foreach ($this->items as $index => $item) {
             try {
-                $dto = ListingData::fromArray(array(
+                $dto = ListingData::fromArray([
                     'source_id' => $batch->source_id,
                     'external_id' => $item['external_id'],
                     'canonical_url' => $item['url'],
@@ -68,32 +68,32 @@ class ProcessIngestionBatchJob implements ShouldQueue
                     'source_published_at' => $item['published_at'] ?? null,
                     'content_hash' => $item['content_hash'] ?? null,
 
-                ));
+                ]);
 
                 $ingestionService->ingest($dto);
                 $accepted++;
             } catch (SuspiciousListingRejectedException $e) {
                 $rejected++;
 
-                IngestionItemError::create(array(
+                IngestionItemError::create([
                     'batch_id' => $batch->id,
                     'item_index' => $index,
                     'external_id' => $item['external_id'] ?? null,
                     'code' => $e->errorCode(),
                     'field' => null,
                     'message' => $e->getMessage(),
-                ));
-            } catch (\Throwable $e) {
+                ]);
+            } catch (Throwable $e) {
                 $rejected++;
 
-                IngestionItemError::create(array(
+                IngestionItemError::create([
                     'batch_id' => $batch->id,
                     'item_index' => $index,
                     'external_id' => $item['external_id'] ?? null,
                     'code' => 'processing_error',
                     'field' => null,
                     'message' => $e->getMessage(),
-                ));
+                ]);
             }
         }
 
@@ -105,12 +105,12 @@ class ProcessIngestionBatchJob implements ShouldQueue
             $status = 'failed';
         }
 
-        $batch->update(array(
+        $batch->update([
             'items_accepted' => $accepted,
             'items_rejected' => $rejected,
             'status' => $status,
             'completed_at' => now(),
-        ));
+        ]);
     }
 
     /**
@@ -129,25 +129,25 @@ class ProcessIngestionBatchJob implements ShouldQueue
         }
 
         // Allaqachon yakunlangan (completed/partial) batch'ga tegmaymiz.
-        if (in_array($batch->status, array('completed', 'partial'), true)) {
+        if (in_array($batch->status, ['completed', 'partial'], true)) {
             return;
         }
 
-        $batch->update(array(
+        $batch->update([
             'status' => 'failed',
-            'error_summary' => array(
+            'error_summary' => [
                 'exception' => class_basename($e),
                 'message' => Str::limit($e->getMessage(), 500),
                 'failed_at' => now()->toIso8601String(),
-            ),
+            ],
             'completed_at' => now(),
-        ));
+        ]);
 
-        Log::error('ProcessIngestionBatchJob butunlay yiqildi', array(
+        Log::error('ProcessIngestionBatchJob butunlay yiqildi', [
             'batch_id' => $this->batchId,
             'exception' => $e::class,
             'message' => $e->getMessage(),
-        ));
+        ]);
 
         // TZ 4: Sentry o'rnatilgan bo'lsa, xatoni batch konteksti bilan
         // yuboramiz. function_exists — paket yo'q bo'lsa xatosiz o'tkazadi;
@@ -156,7 +156,7 @@ class ProcessIngestionBatchJob implements ShouldQueue
             $batchId = $this->batchId;
 
             \Sentry\configureScope(function ($scope) use ($batchId) {
-                $scope->setContext('ingestion_batch', array('batch_id' => $batchId));
+                $scope->setContext('ingestion_batch', ['batch_id' => $batchId]);
             });
 
             \Sentry\captureException($e);

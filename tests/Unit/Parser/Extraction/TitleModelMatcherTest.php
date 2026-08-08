@@ -3,7 +3,7 @@
 use App\Services\Parser\Extraction\TitleModelMatcher;
 
 beforeEach(function () {
-    $this->matcher = new TitleModelMatcher();
+    $this->matcher = new TitleModelMatcher;
 });
 
 it('matches when title contains the expected model name', function () {

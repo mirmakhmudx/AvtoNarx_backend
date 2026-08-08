@@ -16,8 +16,7 @@ class CarModelController extends Controller
         private readonly BrandService $brandService,
         private readonly CarModelService $carModelService,
         private readonly ApiCacheService $apiCache,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request, string $brandSlug): JsonResponse
     {
@@ -36,15 +35,15 @@ class CarModelController extends Controller
         return $this->apiCache->respond($cacheKey, $request, function () use ($brand, $year) {
             $models = $this->carModelService->listByBrand($brand, $year);
 
-            return array(
+            return [
                 'data' => CarModelResource::collection($models->items())->resolve(request()),
-                'meta' => array(
+                'meta' => [
                     'current_page' => $models->currentPage(),
                     'per_page' => $models->perPage(),
                     'total' => $models->total(),
                     'last_page' => $models->lastPage(),
-                ),
-            );
+                ],
+            ];
         });
     }
 }

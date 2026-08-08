@@ -24,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('market_price_statistics', function (Blueprint $table) {
-            $table->dropColumn(array('currency', 'excluded_count', 'period_from', 'period_to', 'method_version'));
+            $table->dropColumn(['currency', 'excluded_count', 'period_from', 'period_to', 'method_version']);
         });
 
         Schema::table('market_price_statistics', function (Blueprint $table) {

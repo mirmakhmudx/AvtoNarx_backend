@@ -21,22 +21,22 @@ class HealthController extends Controller
 {
     public function live(): JsonResponse
     {
-        return response()->json(array('status' => 'alive'), 200);
+        return response()->json(['status' => 'alive'], 200);
     }
 
     public function ready(): JsonResponse
     {
-        $checks = array(
+        $checks = [
             'database' => $this->checkDatabase(),
             'cache' => $this->checkCache(),
-        );
+        ];
 
         $ok = ! in_array('fail', $checks, true);
 
-        return response()->json(array(
+        return response()->json([
             'status' => $ok ? 'ready' : 'not_ready',
             'checks' => $checks,
-        ), $ok ? 200 : 503);
+        ], $ok ? 200 : 503);
     }
 
     private function checkDatabase(): string

@@ -17,6 +17,7 @@ class DiscoverOlxBrandsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
+
     public int $timeout = 60;
 
     public function handle(DiscoverOlxCatalogAdapter $adapter): void
@@ -32,7 +33,7 @@ class DiscoverOlxBrandsJob implements ShouldQueue
         try {
             $brands = $adapter->discoverBrands();
         } catch (\Throwable $e) {
-            Log::error('DiscoverOlxBrandsJob xato: ' . $e->getMessage());
+            Log::error('DiscoverOlxBrandsJob xato: '.$e->getMessage());
 
             return;
         }
@@ -45,17 +46,17 @@ class DiscoverOlxBrandsJob implements ShouldQueue
                 ->first();
 
             if ($existing === null) {
-                DiscoveredBrand::create(array(
+                DiscoveredBrand::create([
                     'source_id' => $source->id,
                     'name' => $brand['name'],
                     'slug' => $brand['slug'],
                     'discovered_url' => $brand['url'],
-                ));
+                ]);
 
                 $newCount++;
             }
         }
 
-        Log::info("DiscoverOlxBrandsJob tugadi: {$newCount} ta yangi marka topildi, jami " . count($brands));
+        Log::info("DiscoverOlxBrandsJob tugadi: {$newCount} ta yangi marka topildi, jami ".count($brands));
     }
 }

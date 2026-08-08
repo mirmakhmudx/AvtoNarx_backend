@@ -9,7 +9,7 @@ class UrlCanonicalizer
         if (str_starts_with($href, 'http://') || str_starts_with($href, 'https://')) {
             $url = $href;
         } else {
-            $url = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
+            $url = rtrim($baseUrl, '/').'/'.ltrim($href, '/');
         }
 
         // Query parametrlarni olib tashlaymiz (allowlist bo'lmasa hammasi kesiladi)
@@ -19,6 +19,6 @@ class UrlCanonicalizer
         $host = $parts['host'] ?? '';
         $path = $parts['path'] ?? '';
 
-        return $scheme . '://' . $host . $path;
+        return $scheme.'://'.$host.$path;
     }
 }

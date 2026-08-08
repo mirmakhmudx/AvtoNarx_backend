@@ -2,6 +2,8 @@
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use Laravel\Fortify\Fortify;
 
 uses(RefreshDatabase::class);
 
@@ -10,12 +12,12 @@ uses(RefreshDatabase::class);
  * yoqa olishi kerak. Bu Fortify o'rnatilgandan keyin ishlaydi; aks holda skip.
  */
 it('lets an admin user enable two-factor authentication (TZ 16)', function () {
-    $user = User::factory()->create(array('role' => 'administrator'));
+    $user = User::factory()->create(['role' => 'administrator']);
 
     expect($user->two_factor_secret)->toBeNull();
 
     // Fortify'ning "2FA yoqish" amali — secret va tiklash kodlarini yaratadi.
-    app(\Laravel\Fortify\Actions\EnableTwoFactorAuthentication::class)($user);
+    app(EnableTwoFactorAuthentication::class)($user);
 
     $user->refresh();
 
@@ -25,7 +27,7 @@ it('lets an admin user enable two-factor authentication (TZ 16)', function () {
     // Tiklash kodlari (recovery codes) ro'yxati bo'sh bo'lmasligi kerak.
     expect($user->recoveryCodes())->not->toBeEmpty();
 })->skip(
-    ! class_exists(\Laravel\Fortify\Fortify::class),
+    ! class_exists(Fortify::class),
     'Fortify hali o\'rnatilmagan — avval: composer require laravel/fortify',
 );
 
@@ -37,6 +39,6 @@ it('hides the two-factor secret from array/JSON serialization', function () {
     expect($array)->not->toHaveKey('two_factor_secret');
     expect($array)->not->toHaveKey('two_factor_recovery_codes');
 })->skip(
-    ! class_exists(\Laravel\Fortify\Fortify::class),
+    ! class_exists(Fortify::class),
     'Fortify hali o\'rnatilmagan — avval: composer require laravel/fortify',
 );

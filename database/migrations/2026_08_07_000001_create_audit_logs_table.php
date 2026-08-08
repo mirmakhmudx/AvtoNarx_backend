@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('user_agent', 500)->nullable();
             $table->timestamps();
 
-            $table->index(array('auditable_type', 'auditable_id'));
+            $table->index(['auditable_type', 'auditable_id']);
             $table->index('user_id');
             $table->index('action');
         });

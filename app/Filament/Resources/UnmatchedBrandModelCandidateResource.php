@@ -11,6 +11,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class UnmatchedBrandModelCandidateResource extends Resource
@@ -165,7 +166,7 @@ class UnmatchedBrandModelCandidateResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(function (\Illuminate\Support\Collection $records): void {
+                    ->action(function (Collection $records): void {
                         app(UnmatchedCandidateService::class)->bulkIgnore($records->pluck('id')->all());
                     })
                     ->deselectRecordsAfterCompletion(),

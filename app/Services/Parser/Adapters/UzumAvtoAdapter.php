@@ -20,14 +20,16 @@ use RuntimeException;
 class UzumAvtoAdapter
 {
     private const SOURCE_CODE = 'uzum_avto';
+
     private const CONDITION = 'new';
+
     private const DEFAULT_CURRENCY = 'UZS';
+
     private const REQUEST_TIMEOUT = 30;
 
     public function __construct(
         private readonly ContentHashBuilder $contentHashBuilder,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function fetchRaw(Source $source, ?string $overrideUrl = null): array
@@ -41,10 +43,10 @@ class UzumAvtoAdapter
         }
 
         $response = Http::timeout(self::REQUEST_TIMEOUT)
-            ->withHeaders(array(
+            ->withHeaders([
                 'Accept' => 'application/json',
                 'User-Agent' => 'AvtoNarx/1.0 (+official-price-collector)',
-            ))
+            ])
             ->get($endpoint);
 
         if (! $response->successful()) {
@@ -77,7 +79,7 @@ class UzumAvtoAdapter
     public function mapCatalog(array $json, Source $source): array
     {
         $models = $this->extractModelList($json, $source);
-        $offers = array();
+        $offers = [];
         $observedAt = new \DateTimeImmutable('now');
 
         foreach ($models as $model) {
@@ -95,7 +97,7 @@ class UzumAvtoAdapter
 
             $modifications = $model['modifications'] ?? $model['trims'] ?? $model['variants'] ?? null;
 
-            if (is_array($modifications) && $modifications !== array()) {
+            if (is_array($modifications) && $modifications !== []) {
                 foreach ($modifications as $mod) {
                     if (! is_array($mod)) {
                         continue;
@@ -151,15 +153,15 @@ class UzumAvtoAdapter
             $node = $json;
             foreach (explode('.', $path) as $key) {
                 if (! is_array($node) || ! array_key_exists($key, $node)) {
-                    return array();
+                    return [];
                 }
                 $node = $node[$key];
             }
 
-            return is_array($node) ? $node : array();
+            return is_array($node) ? $node : [];
         }
 
-        foreach (array('models', 'data', 'items', 'result', 'catalog') as $key) {
+        foreach (['models', 'data', 'items', 'result', 'catalog'] as $key) {
             if (isset($json[$key]) && is_array($json[$key])) {
                 if ($key === 'data' && isset($json[$key]['models']) && is_array($json[$key]['models'])) {
                     return $json[$key]['models'];
@@ -169,18 +171,18 @@ class UzumAvtoAdapter
             }
         }
 
-        return array_is_list($json) ? $json : array();
+        return array_is_list($json) ? $json : [];
     }
 
     /** @param array<string, mixed> $row */
     private function extractPrice(array $row): int
     {
-        $candidates = array(
+        $candidates = [
             $row['price'] ?? null,
             $row['price_amount'] ?? null,
             $row['min_price'] ?? null,
             $row['cost'] ?? null,
-        );
+        ];
 
         foreach ($candidates as $candidate) {
             if (is_array($candidate)) {
@@ -218,8 +220,8 @@ class UzumAvtoAdapter
 
         $trimName = ($trim !== null && trim($trim) !== '') ? trim($trim) : null;
 
-        $externalId = 'uzum-' . mb_strtolower(
-            preg_replace('/[^a-zA-Z0-9]+/', '-', $modelName . '-' . ($trimName ?? '') . '-' . ($year ?? ''))
+        $externalId = 'uzum-'.mb_strtolower(
+            preg_replace('/[^a-zA-Z0-9]+/', '-', $modelName.'-'.($trimName ?? '').'-'.($year ?? ''))
         );
 
         $contentHash = $this->contentHashBuilder->build(
@@ -234,7 +236,7 @@ class UzumAvtoAdapter
             self::CONDITION,
         );
 
-        return OfficialOfferData::fromArray(array(
+        return OfficialOfferData::fromArray([
             'source_id' => $source->id,
             'external_id' => $externalId,
             'url' => $url,
@@ -242,9 +244,9 @@ class UzumAvtoAdapter
             'model' => $modelName,
             'trim' => $trimName,
             'year' => $year,
-            'price' => array('amount' => $priceAmount, 'currency' => self::DEFAULT_CURRENCY),
+            'price' => ['amount' => $priceAmount, 'currency' => self::DEFAULT_CURRENCY],
             'observed_at' => $observedAt->format(DATE_ATOM),
             'content_hash' => $contentHash,
-        ));
+        ]);
     }
 }

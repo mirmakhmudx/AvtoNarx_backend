@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\SourceResource\Pages;
+use App\Filament\Resources\Pages\CreateSource;
+use App\Filament\Resources\Pages\EditSource;
+use App\Filament\Resources\Pages\ListSources;
 use App\Models\Source;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -183,9 +185,9 @@ class SourceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => \App\Filament\Resources\Pages\ListSources::route('/'),
-            'create' => \App\Filament\Resources\Pages\CreateSource::route('/create'),
-            'edit' => \App\Filament\Resources\Pages\EditSource::route('/{record}/edit'),
+            'index' => ListSources::route('/'),
+            'create' => CreateSource::route('/create'),
+            'edit' => EditSource::route('/{record}/edit'),
         ];
     }
 }

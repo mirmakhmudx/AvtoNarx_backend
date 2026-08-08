@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -23,7 +22,7 @@ class ParserClient extends Model implements AuthenticatableContract
 {
     use Authenticatable, HasApiTokens, Notifiable;
 
-    protected $fillable = array(
+    protected $fillable = [
         'name',
         'is_active',
         'last_seen_at',
@@ -34,16 +33,16 @@ class ParserClient extends Model implements AuthenticatableContract
         'last_run_at',
         'last_heartbeat_at',
         'allowed_source_ids',
-        );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'is_active' => 'boolean',
         'last_seen_at' => 'datetime',
         'queue_size' => 'integer',
         'last_run_at' => 'datetime',
         'last_heartbeat_at' => 'datetime',
         'allowed_source_ids' => 'array',
-    );
+    ];
 
     public function isAllowedSource(int $sourceId): bool
     {
@@ -52,7 +51,6 @@ class ParserClient extends Model implements AuthenticatableContract
 
     public function touchLastSeen(): void
     {
-        $this->update(array('last_seen_at' => now()));
+        $this->update(['last_seen_at' => now()]);
     }
-
 }

@@ -30,7 +30,6 @@ return new class extends Migration
         });
     }
 
-
     public function down(): void
     {
         Schema::dropIfExists('market_price_statistics');

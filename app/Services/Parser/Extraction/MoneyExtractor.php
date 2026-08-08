@@ -4,17 +4,17 @@ namespace App\Services\Parser\Extraction;
 
 class MoneyExtractor
 {
-    private const REJECT_PHRASES = array(
+    private const REJECT_PHRASES = [
         'договорная',
         'обмен',
         'бесплатно',
         'кредит',
         'месяц',
         'первоначальный взнос',
-    );
+    ];
 
     /**
-     * @return array{amount:int, currency:string}|null  narx topilmasa yoki rad etilsa null
+     * @return array{amount:int, currency:string}|null narx topilmasa yoki rad etilsa null
      */
     public function extract(string $rawText): ?array
     {
@@ -27,7 +27,7 @@ class MoneyExtractor
         }
 
         // NBSP va oddiy bo'shliqlarni olib tashlaymiz, raqamlarni ajratamiz
-        $cleaned = str_replace(array("\xC2\xA0", ' '), '', $rawText);
+        $cleaned = str_replace(["\xC2\xA0", ' '], '', $rawText);
 
         if (preg_match('/(\d+)\s*\$/u', $rawText) || str_contains($cleaned, '$')) {
             if (preg_match('/(\d[\d\xC2\xA0 ]*\d|\d)\s*\$/u', $rawText, $matches)) {
@@ -37,7 +37,7 @@ class MoneyExtractor
                     return null;
                 }
 
-                return array('amount' => (int) $digits, 'currency' => 'USD');
+                return ['amount' => (int) $digits, 'currency' => 'USD'];
             }
         }
 
@@ -48,7 +48,7 @@ class MoneyExtractor
                 return null;
             }
 
-            return array('amount' => (int) $digits, 'currency' => 'UZS');
+            return ['amount' => (int) $digits, 'currency' => 'UZS'];
         }
 
         return null;

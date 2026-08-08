@@ -13,11 +13,11 @@ class ResolveCandidateRequest extends FormRequest
 
     public function rules(): array
     {
-        return array(
-            'brand_id' => array('required', 'integer', 'exists:brands,id'),
-            'model_name' => array('required', 'string', 'max:120'),
-            'model_slug' => array('required', 'string', 'max:140'),
-            'production_from' => array('nullable', 'integer', 'min:1950'),
-        );
+        return [
+            'brand_id' => ['required', 'integer', 'exists:brands,id'],
+            'model_name' => ['required', 'string', 'max:120'],
+            'model_slug' => ['required', 'string', 'max:140'],
+            'production_from' => ['nullable', 'integer', 'min:1950'],
+        ];
     }
 }

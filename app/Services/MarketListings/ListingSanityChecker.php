@@ -38,24 +38,24 @@ class ListingSanityChecker
     private const FALLBACK_URL_MARKER = 'reason=extended_search';
 
     /**
-     * @return array{code: string, message: string}|null  null — muammo yo'q.
+     * @return array{code: string, message: string}|null null — muammo yo'q.
      */
     public function check(?string $canonicalUrl, ?int $priceUzs): ?array
     {
         if ($canonicalUrl !== null && str_contains($canonicalUrl, self::FALLBACK_URL_MARKER)) {
-            return array(
+            return [
                 'code' => 'olx_fallback_result',
                 'message' => "OLX'ning \"hech narsa topilmadi, o'xshashlarini ko'ring\" fallback natijasi — "
-                    . 'haqiqiy moslik emas (URL\'da ' . self::FALLBACK_URL_MARKER . ' belgisi bor).',
-            );
+                    .'haqiqiy moslik emas (URL\'da '.self::FALLBACK_URL_MARKER.' belgisi bor).',
+            ];
         }
 
         if ($priceUzs !== null && $priceUzs < self::MIN_PLAUSIBLE_PRICE_UZS) {
-            return array(
+            return [
                 'code' => 'implausible_price',
-                'message' => 'Narx (' . number_format($priceUzs) . ' UZS) mashina uchun aqlga sig\'maydigan '
-                    . 'darajada past — chegara: ' . number_format(self::MIN_PLAUSIBLE_PRICE_UZS) . ' UZS.',
-            );
+                'message' => 'Narx ('.number_format($priceUzs).' UZS) mashina uchun aqlga sig\'maydigan '
+                    .'darajada past — chegara: '.number_format(self::MIN_PLAUSIBLE_PRICE_UZS).' UZS.',
+            ];
         }
 
         return null;

@@ -3,19 +3,19 @@
 use App\Services\Parser\Extraction\MoneyExtractor;
 
 beforeEach(function () {
-    $this->extractor = new MoneyExtractor();
+    $this->extractor = new MoneyExtractor;
 });
 
 it('extracts UZS amount correctly', function () {
     $result = $this->extractor->extract('145 000 000 сум');
 
-    expect($result)->toBe(array('amount' => 145000000, 'currency' => 'UZS'));
+    expect($result)->toBe(['amount' => 145000000, 'currency' => 'UZS']);
 });
 
 it('extracts USD amount correctly', function () {
     $result = $this->extractor->extract('11 200 $');
 
-    expect($result)->toBe(array('amount' => 11200, 'currency' => 'USD'));
+    expect($result)->toBe(['amount' => 11200, 'currency' => 'USD']);
 });
 
 it('rejects "dogovornaya" price', function () {
@@ -33,5 +33,5 @@ it('rejects empty string', function () {
 it('handles non-breaking spaces in numbers', function () {
     $result = $this->extractor->extract("145\xC2\xA0000\xC2\xA0000 сум");
 
-    expect($result)->toBe(array('amount' => 145000000, 'currency' => 'UZS'));
+    expect($result)->toBe(['amount' => 145000000, 'currency' => 'UZS']);
 });

@@ -29,7 +29,7 @@ trait Auditable
                 return;
             }
 
-            $old = array();
+            $old = [];
             foreach (array_keys($changes) as $key) {
                 $old[$key] = $model->getOriginal($key);
             }
@@ -52,7 +52,7 @@ trait Auditable
 
         $request = request();
 
-        AuditLog::create(array(
+        AuditLog::create([
             'user_id' => $actor->getKey(),
             'action' => $action,
             'auditable_type' => $this->getMorphClass(),
@@ -61,7 +61,7 @@ trait Auditable
             'new_values' => $new,
             'ip_address' => $request?->ip(),
             'user_agent' => $request ? substr((string) $request->userAgent(), 0, 500) : null,
-        ));
+        ]);
     }
 
     protected function resolveAuditActor()
@@ -83,7 +83,7 @@ trait Auditable
      */
     protected function redactAuditValues(array $values): array
     {
-        foreach (array('password', 'remember_token', 'api_token') as $secret) {
+        foreach (['password', 'remember_token', 'api_token'] as $secret) {
             if (array_key_exists($secret, $values)) {
                 $values[$secret] = '[redacted]';
             }

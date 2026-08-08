@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->source = Source::create(array(
+    $this->source = Source::create([
         'code' => 'uzum_avto',
         'name' => 'Uzum Avto',
         'type' => 'manufacturer',
@@ -18,16 +18,16 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'official',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
-    $this->model = CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
+    $this->brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
+    $this->model = CarModel::create(['brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true]);
 });
 
-function makeRegionStat(array $overrides = array()): MarketPriceStatistic
+function makeRegionStat(array $overrides = []): MarketPriceStatistic
 {
-    return MarketPriceStatistic::create(array_merge(array(
+    return MarketPriceStatistic::create(array_merge([
         'brand_id' => test()->brand->id,
         'model_id' => test()->model->id,
         'year' => 2026,
@@ -45,12 +45,12 @@ function makeRegionStat(array $overrides = array()): MarketPriceStatistic
         'period_to' => now(),
         'method_version' => '1.0',
         'calculated_at' => now(),
-    ), $overrides));
+    ], $overrides));
 }
 
 it('returns the nationwide (region_code = null) statistic when no region is given', function () {
-    makeRegionStat(array('region_code' => null, 'median_price_uzs' => 140_000_000));
-    makeRegionStat(array('region_code' => 'TAS', 'median_price_uzs' => 160_000_000));
+    makeRegionStat(['region_code' => null, 'median_price_uzs' => 140_000_000]);
+    makeRegionStat(['region_code' => 'TAS', 'median_price_uzs' => 160_000_000]);
 
     $response = $this->getJson("/api/v1/models/{$this->model->id}/prices");
 
@@ -60,8 +60,8 @@ it('returns the nationwide (region_code = null) statistic when no region is give
 });
 
 it('filters market_prices by region when ?region= is given', function () {
-    makeRegionStat(array('region_code' => null, 'median_price_uzs' => 140_000_000));
-    makeRegionStat(array('region_code' => 'TAS', 'median_price_uzs' => 160_000_000));
+    makeRegionStat(['region_code' => null, 'median_price_uzs' => 140_000_000]);
+    makeRegionStat(['region_code' => 'TAS', 'median_price_uzs' => 160_000_000]);
 
     $response = $this->getJson("/api/v1/models/{$this->model->id}/prices?region=TAS");
 
@@ -72,7 +72,7 @@ it('filters market_prices by region when ?region= is given', function () {
 });
 
 it('returns official_price in the TZ shape (amount/currency/observed_at/source_url)', function () {
-    OfficialOffer::create(array(
+    OfficialOffer::create([
         'source_id' => $this->source->id,
         'brand_id' => $this->brand->id,
         'model_id' => $this->model->id,
@@ -84,12 +84,12 @@ it('returns official_price in the TZ shape (amount/currency/observed_at/source_u
         'publication_status' => 'published',
         'observed_at' => now(),
         'content_hash' => bin2hex(random_bytes(16)),
-    ));
+    ]);
 
     $response = $this->getJson("/api/v1/models/{$this->model->id}/prices");
 
     $response->assertOk();
-    expect($response->json('official_price'))->toHaveKeys(array('amount', 'currency', 'observed_at', 'source_url'));
+    expect($response->json('official_price'))->toHaveKeys(['amount', 'currency', 'observed_at', 'source_url']);
     expect($response->json('official_price.amount'))->toBe(145_000_000);
 });
 

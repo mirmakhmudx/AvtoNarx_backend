@@ -23,16 +23,16 @@ class TopBrandsChartWidget extends ChartWidget
             ->limit(10)
             ->get();
 
-        return array(
-            'datasets' => array(
-                array(
+        return [
+            'datasets' => [
+                [
                     'label' => 'E\'lonlar soni',
                     'data' => $rows->pluck('total')->all(),
                     'backgroundColor' => '#f59e0b',
-                ),
-            ),
+                ],
+            ],
             'labels' => $rows->pluck('brand_name')->all(),
-        );
+        ];
     }
 
     protected function getType(): string
@@ -42,11 +42,11 @@ class TopBrandsChartWidget extends ChartWidget
 
     protected function getOptions(): array
     {
-        return array(
+        return [
             'indexAxis' => 'y',
-            'plugins' => array(
-                'legend' => array('display' => false),
-            ),
-        );
+            'plugins' => [
+                'legend' => ['display' => false],
+            ],
+        ];
     }
 }

@@ -30,10 +30,10 @@ class CheckParserTargetUrlsCommand extends Command
 
         $targets = ParserTarget::query()
             ->active()
-            ->with(array('brand', 'carModel'))
+            ->with(['brand', 'carModel'])
             ->get();
 
-        $malformed = array();
+        $malformed = [];
 
         foreach ($targets as $target) {
             if (! $this->hasModelSegment($target->target_url)) {
@@ -47,7 +47,7 @@ class CheckParserTargetUrlsCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->warn(count($malformed) . " ta noto'g'ri target topildi (jami {$targets->count()} tadan):");
+        $this->warn(count($malformed)." ta noto'g'ri target topildi (jami {$targets->count()} tadan):");
         $this->newLine();
 
         foreach ($malformed as $target) {
@@ -57,13 +57,13 @@ class CheckParserTargetUrlsCommand extends Command
         if ($deactivate) {
             $ids = collect($malformed)->pluck('id')->all();
 
-            ParserTarget::whereIn('id', $ids)->update(array('is_active' => false));
+            ParserTarget::whereIn('id', $ids)->update(['is_active' => false]);
 
             $this->newLine();
-            $this->info(count($ids) . " ta target faolsizlantirildi — DiscoverOlxModelsJob keyingi safar to'g'ri URL bilan qayta yaratadi (yoki qo'lda target_url'ni to'g'irlang).");
+            $this->info(count($ids)." ta target faolsizlantirildi — DiscoverOlxModelsJob keyingi safar to'g'ri URL bilan qayta yaratadi (yoki qo'lda target_url'ni to'g'irlang).");
         } else {
             $this->newLine();
-            $this->comment("Faolsizlantirish uchun: php artisan parser:check-target-urls --deactivate");
+            $this->comment('Faolsizlantirish uchun: php artisan parser:check-target-urls --deactivate');
         }
 
         return self::SUCCESS;
@@ -79,7 +79,7 @@ class CheckParserTargetUrlsCommand extends Command
     {
         $path = parse_url($targetUrl, PHP_URL_PATH) ?? '';
         $trimmed = trim($path, '/');
-        $segments = $trimmed === '' ? array() : explode('/', $trimmed);
+        $segments = $trimmed === '' ? [] : explode('/', $trimmed);
 
         // Kutilgan: transport / legkovye-avtomobili / {brend} / {model}
         return count($segments) === 4;

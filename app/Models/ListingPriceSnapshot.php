@@ -8,21 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ListingPriceSnapshot extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'market_listing_id',
         'price_amount',
         'currency',
         'price_uzs',
         'observed_at',
         'content_hash',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'currency' => Currency::class,
         'price_amount' => 'integer',
         'price_uzs' => 'integer',
         'observed_at' => 'datetime',
-    );
+    ];
 
     public function marketListing(): BelongsTo
     {

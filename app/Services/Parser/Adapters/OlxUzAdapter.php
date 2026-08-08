@@ -15,24 +15,33 @@ use Symfony\Component\DomCrawler\Crawler;
 class OlxUzAdapter
 {
     private const SOURCE_CODE = 'olx_uz';
+
     private const BASE_URL = 'https://www.olx.uz';
+
     private const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
     private const CARD_SELECTOR = '[data-cy=l-card]';
+
     private const TITLE_SELECTOR = '[data-cy="ad-card-title"] h4';
+
     private const PRICE_SELECTOR = '[data-testid="ad-price"]';
+
     private const LOCATION_SELECTOR = '[data-testid="location-date"]';
+
     private const LINK_SELECTOR = 'a[href^="/d/obyavlenie/"]';
 
     private const MAX_PAGES_PER_TARGET = 10;
-    private const MAX_CONSECUTIVE_EMPTY_PAGES = 2;
 
+    private const MAX_CONSECUTIVE_EMPTY_PAGES = 2;
 
     private const MAX_ITEMS_PER_TARGET = 30;
 
     private const PAGE_REQUEST_DELAY_SECONDS = 2;
+
     private const HTTP_TIMEOUT_SECONDS = 20;
+
     private const MAX_ATTEMPTS_PER_PAGE = 2;
+
     private const RETRY_DELAY_SECONDS = 3;
 
     private const DETAIL_PAGE_REQUEST_DELAY_SECONDS = 1;
@@ -42,15 +51,14 @@ class OlxUzAdapter
         private readonly YearExtractor $yearExtractor,
         private readonly ContentHashBuilder $contentHashBuilder,
         private readonly TitleModelMatcher $titleModelMatcher,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{results: array<int, array{item: array|null, rejected_reason: string|null, title_raw: string|null}>, complete: bool, error: string|null}
      */
     public function extractFromTarget(ParserTarget $target): array
     {
-        $allResults = array();
+        $allResults = [];
         $consecutiveEmptyPages = 0;
 
         for ($page = 1; $page <= self::MAX_PAGES_PER_TARGET; $page++) {
@@ -59,11 +67,11 @@ class OlxUzAdapter
             } catch (SourceBlockedException $e) {
                 throw $e;
             } catch (\RuntimeException $e) {
-                return array(
+                return [
                     'results' => $allResults,
                     'complete' => false,
                     'error' => $e->getMessage(),
-                );
+                ];
             }
 
             if ($pageResults === null) {
@@ -122,7 +130,7 @@ class OlxUzAdapter
             }
         }
 
-        return array('results' => $allResults, 'complete' => true, 'error' => null);
+        return ['results' => $allResults, 'complete' => true, 'error' => null];
     }
 
     /**
@@ -158,7 +166,7 @@ class OlxUzAdapter
             return null;
         }
 
-        $results = array();
+        $results = [];
 
         $crawler->filter(self::CARD_SELECTOR)->each(function (Crawler $card) use (&$results, $target) {
             $results[] = $this->extractCard($card, $target);
@@ -176,13 +184,13 @@ class OlxUzAdapter
             $isLastAttempt = $attempt === self::MAX_ATTEMPTS_PER_PAGE;
 
             try {
-                $response = Http::withHeaders(array(
+                $response = Http::withHeaders([
                     'User-Agent' => self::USER_AGENT,
-                ))->timeout(self::HTTP_TIMEOUT_SECONDS)->get($url);
+                ])->timeout(self::HTTP_TIMEOUT_SECONDS)->get($url);
             } catch (ConnectionException $e) {
                 if ($isLastAttempt) {
                     throw new \RuntimeException(
-                        "Sahifa {$page} yuklanmadi (tarmoq xatosi, {$attempt} urinishdan keyin): " . $e->getMessage()
+                        "Sahifa {$page} yuklanmadi (tarmoq xatosi, {$attempt} urinishdan keyin): ".$e->getMessage()
                     );
                 }
 
@@ -192,12 +200,12 @@ class OlxUzAdapter
             }
 
             if ($response->status() === 403 || $response->status() === 429) {
-                throw new SourceBlockedException('Manba bloklandi (HTTP ' . $response->status() . '). To\'xtatildi.');
+                throw new SourceBlockedException('Manba bloklandi (HTTP '.$response->status().'). To\'xtatildi.');
             }
 
             if ($response->serverError()) {
                 if ($isLastAttempt) {
-                    throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP " . $response->status() . ", {$attempt} urinishdan keyin).");
+                    throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP ".$response->status().", {$attempt} urinishdan keyin).");
                 }
 
                 sleep(self::RETRY_DELAY_SECONDS);
@@ -206,7 +214,7 @@ class OlxUzAdapter
             }
 
             if (! $response->successful()) {
-                throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP " . $response->status() . ').');
+                throw new \RuntimeException("Sahifa {$page} yuklanmadi (HTTP ".$response->status().').');
             }
 
             return $response->body();
@@ -223,7 +231,7 @@ class OlxUzAdapter
 
         $separator = str_contains($baseUrl, '?') ? '&' : '?';
 
-        return $baseUrl . $separator . 'page=' . $page;
+        return $baseUrl.$separator.'page='.$page;
     }
 
     private function looksLikeBlockPageByLength(int $htmlLength, Crawler $crawler): bool
@@ -273,9 +281,9 @@ class OlxUzAdapter
     private function fetchYearFromDetailPage(string $url): ?int
     {
         try {
-            $response = Http::withHeaders(array(
+            $response = Http::withHeaders([
                 'User-Agent' => self::USER_AGENT,
-            ))->timeout(self::HTTP_TIMEOUT_SECONDS)->get($url);
+            ])->timeout(self::HTTP_TIMEOUT_SECONDS)->get($url);
         } catch (\Throwable $e) {
             return null;
         }
@@ -303,10 +311,10 @@ class OlxUzAdapter
         $externalIdRaw = $card->attr('id');
 
         if (! $externalIdRaw) {
-            return array('item' => null, 'rejected_reason' => 'missing_external_id', 'title_raw' => null, 'canonical_url' => null);
+            return ['item' => null, 'rejected_reason' => 'missing_external_id', 'title_raw' => null, 'canonical_url' => null];
         }
 
-        $externalId = 'olx-' . $externalIdRaw;
+        $externalId = 'olx-'.$externalIdRaw;
 
         $priceNode = $card->filter(self::PRICE_SELECTOR);
         $priceText = $priceNode->count() > 0 ? trim($priceNode->text()) : '';
@@ -314,26 +322,26 @@ class OlxUzAdapter
         $money = $this->moneyExtractor->extract($priceText);
 
         if ($money === null) {
-            return array('item' => null, 'rejected_reason' => 'invalid_price', 'title_raw' => null, 'canonical_url' => null);
+            return ['item' => null, 'rejected_reason' => 'invalid_price', 'title_raw' => null, 'canonical_url' => null];
         }
 
         $linkNode = $card->filter(self::LINK_SELECTOR)->first();
         $href = $linkNode->count() > 0 ? $linkNode->attr('href') : null;
-        $canonicalUrl = $href ? self::BASE_URL . $href : null;
+        $canonicalUrl = $href ? self::BASE_URL.$href : null;
 
         if (! $canonicalUrl) {
-            return array('item' => null, 'rejected_reason' => 'missing_url', 'title_raw' => null, 'canonical_url' => null);
+            return ['item' => null, 'rejected_reason' => 'missing_url', 'title_raw' => null, 'canonical_url' => null];
         }
 
         $titleNode = $card->filter(self::TITLE_SELECTOR);
         $titleText = $titleNode->count() > 0 ? trim($titleNode->text()) : '';
 
         if (str_contains($canonicalUrl, 'reason=extended_search')) {
-            return array('item' => null, 'rejected_reason' => 'olx_fallback_result', 'title_raw' => $titleText, 'canonical_url' => $canonicalUrl);
+            return ['item' => null, 'rejected_reason' => 'olx_fallback_result', 'title_raw' => $titleText, 'canonical_url' => $canonicalUrl];
         }
 
         if (! $this->titleModelMatcher->matches($titleText, $target->carModel->name)) {
-            return array('item' => null, 'rejected_reason' => 'title_model_mismatch', 'title_raw' => $titleText, 'canonical_url' => $canonicalUrl);
+            return ['item' => null, 'rejected_reason' => 'title_model_mismatch', 'title_raw' => $titleText, 'canonical_url' => $canonicalUrl];
         }
 
         $locationNode = $card->filter(self::LOCATION_SELECTOR);
@@ -361,8 +369,8 @@ class OlxUzAdapter
             'unknown',
         );
 
-        return array(
-            'item' => array(
+        return [
+            'item' => [
                 'source_id' => $target->source_id,
                 'external_id' => $externalId,
                 'canonical_url' => $canonicalUrl,
@@ -377,9 +385,9 @@ class OlxUzAdapter
                 'seller_type' => 'unknown',
                 'region' => $region,
                 'content_hash' => $contentHash,
-            ),
+            ],
             'rejected_reason' => null,
             'title_raw' => $titleText,
-        );
+        ];
     }
 }

@@ -3,7 +3,7 @@
 use App\Services\Parser\Extraction\UrlCanonicalizer;
 
 beforeEach(function () {
-    $this->canonicalizer = new UrlCanonicalizer();
+    $this->canonicalizer = new UrlCanonicalizer;
 });
 
 it('strips query parameters', function () {

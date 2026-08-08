@@ -15,7 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->source = Source::create(array(
+    $this->source = Source::create([
         'code' => 'uzum_avto',
         'name' => 'Uzum Avto',
         'type' => 'manufacturer',
@@ -23,11 +23,11 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'official',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
-    $this->model = CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
+    $this->brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
+    $this->model = CarModel::create(['brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true]);
 
     $this->aliasService = app(CatalogAliasService::class);
     $this->service = app(OfficialOfferIngestionService::class);
@@ -42,9 +42,9 @@ function verifyOfferAliases(): void
     test()->aliasService->verify($modelAlias);
 }
 
-function makeOfferData(array $overrides = array()): OfficialOfferData
+function makeOfferData(array $overrides = []): OfficialOfferData
 {
-    return OfficialOfferData::fromArray(array_merge(array(
+    return OfficialOfferData::fromArray(array_merge([
         'source_id' => test()->source->id,
         'external_id' => 'chevrolet-cobalt-style-at',
         'url' => 'https://avto.uzum.uz/cars/cobalt',
@@ -52,10 +52,10 @@ function makeOfferData(array $overrides = array()): OfficialOfferData
         'model' => 'Cobalt',
         'trim' => 'Style AT',
         'year' => 2026,
-        'price' => array('amount' => 145000000, 'currency' => 'UZS'),
+        'price' => ['amount' => 145000000, 'currency' => 'UZS'],
         'observed_at' => now()->toIso8601String(),
         'content_hash' => hash('sha256', 'default-fixture'),
-    ), $overrides));
+    ], $overrides));
 }
 
 it('throws unmatched_brand when the brand cannot be resolved via alias', function () {
@@ -100,9 +100,9 @@ it('computes price_uzs via the exchange rate when the item is in USD', function 
     verifyOfferAliases();
     app(ExchangeRateService::class)->setRate('USD', 'UZS', 12700, now()->toDateString());
 
-    $offer = $this->service->ingest(makeOfferData(array(
-        'price' => array('amount' => 12000, 'currency' => 'USD'),
-    )));
+    $offer = $this->service->ingest(makeOfferData([
+        'price' => ['amount' => 12000, 'currency' => 'USD'],
+    ]));
 
     expect($offer->price_uzs)->toBe(12000 * 12700);
 });
@@ -110,13 +110,13 @@ it('computes price_uzs via the exchange rate when the item is in USD', function 
 it('does not reopen moderation when content_hash is unchanged on re-ingest', function () {
     verifyOfferAliases();
 
-    $offer = $this->service->ingest(makeOfferData(array('content_hash' => 'hash-a')));
-    $offer->update(array('publication_status' => 'published'));
+    $offer = $this->service->ingest(makeOfferData(['content_hash' => 'hash-a']));
+    $offer->update(['publication_status' => 'published']);
 
-    $again = $this->service->ingest(makeOfferData(array(
+    $again = $this->service->ingest(makeOfferData([
         'content_hash' => 'hash-a',
         'observed_at' => now()->addHour()->toIso8601String(),
-    )));
+    ]));
 
     expect(OfficialOffer::count())->toBe(1);
     expect($again->publication_status->value)->toBe('published');
@@ -126,13 +126,13 @@ it('does not reopen moderation when content_hash is unchanged on re-ingest', fun
 it('sets status back to pending when price/content changes, even if previously published', function () {
     verifyOfferAliases();
 
-    $offer = $this->service->ingest(makeOfferData(array('content_hash' => 'hash-a', 'price' => array('amount' => 145000000, 'currency' => 'UZS'))));
-    $offer->update(array('publication_status' => 'published'));
+    $offer = $this->service->ingest(makeOfferData(['content_hash' => 'hash-a', 'price' => ['amount' => 145000000, 'currency' => 'UZS']]));
+    $offer->update(['publication_status' => 'published']);
 
-    $changed = $this->service->ingest(makeOfferData(array(
+    $changed = $this->service->ingest(makeOfferData([
         'content_hash' => 'hash-b',
-        'price' => array('amount' => 150000000, 'currency' => 'UZS'),
-    )));
+        'price' => ['amount' => 150000000, 'currency' => 'UZS'],
+    ]));
 
     expect(OfficialOffer::count())->toBe(1);
     expect($changed->publication_status->value)->toBe('pending');
@@ -141,7 +141,7 @@ it('sets status back to pending when price/content changes, even if previously p
 
 it('auto-publishes immediately when the source has settings->auto_publish = true', function () {
     verifyOfferAliases();
-    $this->source->update(array('settings' => array('auto_publish' => true)));
+    $this->source->update(['settings' => ['auto_publish' => true]]);
 
     $offer = $this->service->ingest(makeOfferData());
 
@@ -163,17 +163,17 @@ it('does NOT auto-publish when the source has no auto_publish flag (defaults to 
 it('treats different trim_name values as separate offers for the same model', function () {
     verifyOfferAliases();
 
-    $this->service->ingest(makeOfferData(array(
+    $this->service->ingest(makeOfferData([
         'external_id' => 'cobalt-style',
         'trim' => 'Style AT',
         'content_hash' => 'h1',
-    )));
+    ]));
 
-    $this->service->ingest(makeOfferData(array(
+    $this->service->ingest(makeOfferData([
         'external_id' => 'cobalt-lt',
         'trim' => 'LT MT',
         'content_hash' => 'h2',
-    )));
+    ]));
 
     expect(OfficialOffer::count())->toBe(2);
 });

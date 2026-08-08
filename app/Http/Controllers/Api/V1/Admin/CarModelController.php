@@ -13,8 +13,7 @@ class CarModelController extends Controller
 {
     public function __construct(
         private readonly CarModelService $carModelService,
-    ) {
-    }
+    ) {}
 
     public function store(StoreCarModelRequest $request): CarModelResource
     {

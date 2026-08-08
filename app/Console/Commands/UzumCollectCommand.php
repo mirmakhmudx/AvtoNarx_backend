@@ -38,12 +38,12 @@ class UzumCollectCommand extends Command
 
             $offers = $adapter->fetchOfficialOffers($source, $url);
         } catch (\Throwable $e) {
-            $this->error('Xato: ' . $e->getMessage());
+            $this->error('Xato: '.$e->getMessage());
 
             return self::FAILURE;
         }
 
-        $this->info(count($offers) . " ta taklif topildi.");
+        $this->info(count($offers).' ta taklif topildi.');
 
         if ($this->option('dry-run')) {
             foreach (array_slice($offers, 0, 25) as $o) {
@@ -59,7 +59,7 @@ class UzumCollectCommand extends Command
             }
 
             if (count($offers) > 25) {
-                $this->comment('  ... va yana ' . (count($offers) - 25) . ' ta.');
+                $this->comment('  ... va yana '.(count($offers) - 25).' ta.');
             }
 
             $this->comment('DRY-RUN — bazaga yozilmadi.');

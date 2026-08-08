@@ -18,6 +18,7 @@ class RunUzumAvtoOfficialOffersJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
+
     public int $timeout = 300;
 
     public function __construct()
@@ -54,10 +55,10 @@ class RunUzumAvtoOfficialOffersJob implements ShouldQueue
                 $rejected++;
             } catch (\Throwable $e) {
                 $rejected++;
-                Log::warning('Uzum offer ingest xatosi: ' . $e->getMessage());
+                Log::warning('Uzum offer ingest xatosi: '.$e->getMessage());
             }
         }
 
-        Log::info("RunUzumAvtoOfficialOffersJob tugadi: qabul={$accepted}, rad={$rejected}, jami=" . count($offers));
+        Log::info("RunUzumAvtoOfficialOffersJob tugadi: qabul={$accepted}, rad={$rejected}, jami=".count($offers));
     }
 }

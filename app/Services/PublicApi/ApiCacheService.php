@@ -15,26 +15,26 @@ class ApiCacheService
         $store = (string) config('public_api.cache_store', 'redis');
 
         $cached = Cache::store($store)->remember($cacheKey, $ttl, function () use ($resolver) {
-            return array(
+            return [
                 'payload' => $resolver(),
                 'generated_at' => now()->toIso8601String(),
-            );
+            ];
         });
 
         $generatedAt = Carbon::parse($cached['generated_at']);
-        $etag = '"' . hash('sha256', $cacheKey . '|' . $cached['generated_at']) . '"';
+        $etag = '"'.hash('sha256', $cacheKey.'|'.$cached['generated_at']).'"';
 
         if ($this->isNotModified($request, $etag, $generatedAt)) {
             return response()->json(null, 304)
                 ->header('ETag', $etag)
                 ->header('Last-Modified', $generatedAt->toRfc7231String())
-                ->header('Cache-Control', 'public, max-age=' . $ttl);
+                ->header('Cache-Control', 'public, max-age='.$ttl);
         }
 
         return response()->json($cached['payload'])
             ->header('ETag', $etag)
             ->header('Last-Modified', $generatedAt->toRfc7231String())
-            ->header('Cache-Control', 'public, max-age=' . $ttl);
+            ->header('Cache-Control', 'public, max-age='.$ttl);
     }
 
     public function forget(string $cacheKey): void

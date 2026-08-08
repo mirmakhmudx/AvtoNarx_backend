@@ -17,7 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, Notifiable, HasApiTokens, \Laravel\Fortify\TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, \Laravel\Fortify\TwoFactorAuthenticatable, Notifiable;
 
     protected function casts(): array
     {
@@ -35,7 +35,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function isContentEditor(): bool
     {
-        return in_array($this->role, array(UserRole::Administrator, UserRole::ContentEditor), true);
+        return in_array($this->role, [UserRole::Administrator, UserRole::ContentEditor], true);
     }
 
     public function canAccessPanel(Panel $panel): bool

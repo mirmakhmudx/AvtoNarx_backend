@@ -4,13 +4,13 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ParserTargetResource\Pages;
 use App\Models\ParserTarget;
-use App\Models\Source;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class ParserTargetResource extends Resource
 {
@@ -208,7 +208,7 @@ class ParserTargetResource extends Resource
                     ->label('Tanlanganlarni faollashtirish')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->action(fn (\Illuminate\Support\Collection $records) => $records->each->update(['is_active' => true]))
+                    ->action(fn (Collection $records) => $records->each->update(['is_active' => true]))
                     ->deselectRecordsAfterCompletion(),
 
                 Tables\Actions\BulkAction::make('deactivate')
@@ -216,7 +216,7 @@ class ParserTargetResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(fn (\Illuminate\Support\Collection $records) => $records->each->update(['is_active' => false]))
+                    ->action(fn (Collection $records) => $records->each->update(['is_active' => false]))
                     ->deselectRecordsAfterCompletion(),
             ]);
     }

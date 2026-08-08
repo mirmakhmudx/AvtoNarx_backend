@@ -8,13 +8,13 @@ use App\Http\Requests\Catalog\UpdateBrandRequest;
 use App\Http\Resources\Catalog\BrandResource;
 use App\Models\Brand;
 use App\Services\Catalog\BrandService;
+use Illuminate\Http\JsonResponse;
 
 class BrandController extends Controller
 {
     public function __construct(
         private readonly BrandService $brandService,
-    ) {
-    }
+    ) {}
 
     public function store(StoreBrandRequest $request): BrandResource
     {
@@ -34,12 +34,12 @@ class BrandController extends Controller
         return BrandResource::make($updated);
     }
 
-    public function destroy(Brand $brand): \Illuminate\Http\JsonResponse
+    public function destroy(Brand $brand): JsonResponse
     {
         $this->authorize('delete', $brand);
 
         $this->brandService->deactivate($brand);
 
-        return response()->json(array('message' => 'Brand deactivated'));
+        return response()->json(['message' => 'Brand deactivated']);
     }
 }

@@ -15,8 +15,7 @@ class ModelPriceController extends Controller
     public function __construct(
         private readonly ModelPriceService $modelPriceService,
         private readonly ApiCacheService $apiCache,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request, CarModel $carModel): JsonResponse
     {
@@ -34,12 +33,12 @@ class ModelPriceController extends Controller
             $priceStatuses = $this->modelPriceService->getPriceStatuses($carModel, $year, $region);
             $officialOffer = $this->modelPriceService->getCheapestOfficialOffer($carModel, $year);
 
-            $marketPrices = array();
+            $marketPrices = [];
 
             foreach ($priceStatuses as $entry) {
                 if ($entry['status'] === 'ok') {
                     $stat = $entry['statistic'];
-                    $marketPrices[] = array(
+                    $marketPrices[] = [
                         'year' => $entry['year'],
                         'status' => 'ok',
                         'currency' => $stat->currency,
@@ -53,26 +52,26 @@ class ModelPriceController extends Controller
                         'p75_uzs' => $stat->p75_price_uzs,
                         'method_version' => $stat->method_version,
                         'calculated_at' => $stat->calculated_at?->toIso8601String(),
-                    );
+                    ];
 
                     continue;
                 }
 
-                $marketPrices[] = array(
+                $marketPrices[] = [
                     'year' => $entry['year'],
                     'status' => $entry['status'],
                     'sample_size' => $entry['sample_size'],
                     'min_required' => $entry['min_required'],
-                );
+                ];
             }
 
-            return array(
+            return [
                 'model_id' => $carModel->id,
                 'model_name' => $carModel->name,
                 'region' => $region,
                 'official_price' => PriceFormatter::officialPrice($officialOffer),
                 'market_prices' => $marketPrices,
-            );
+            ];
         });
     }
 }

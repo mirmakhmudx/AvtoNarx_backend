@@ -9,7 +9,7 @@ class UnmatchedCandidateResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        return array(
+        return [
             'id' => $this->id,
             'source' => $this->source->name,
             'brand_name_raw' => $this->brand_name_raw,
@@ -18,6 +18,6 @@ class UnmatchedCandidateResource extends JsonResource
             'status' => $this->status,
             'first_seen_at' => $this->first_seen_at?->toIso8601String(),
             'last_seen_at' => $this->last_seen_at?->toIso8601String(),
-        );
+        ];
     }
 }

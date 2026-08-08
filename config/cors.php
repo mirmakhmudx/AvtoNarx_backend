@@ -15,11 +15,11 @@
 |
 */
 
-return array(
+return [
 
-    'paths' => array('api/*'),
+    'paths' => ['api/*'],
 
-    'allowed_methods' => array('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'),
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     'allowed_origins' => array_values(array_filter(array_map(
         'trim',
@@ -33,13 +33,13 @@ return array(
         explode(',', (string) env('CORS_ALLOWED_ORIGIN_PATTERNS', '')),
     ))),
 
-    'allowed_headers' => array('*'),
+    'allowed_headers' => ['*'],
 
     // Public API ETag/Last-Modified qaytaradi — brauzer ularni o'qiy olishi uchun ochamiz.
-    'exposed_headers' => array('ETag', 'Last-Modified'),
+    'exposed_headers' => ['ETag', 'Last-Modified'],
 
     'max_age' => (int) env('CORS_MAX_AGE', 3600),
 
     'supports_credentials' => (bool) env('CORS_SUPPORTS_CREDENTIALS', false),
 
-);
+];

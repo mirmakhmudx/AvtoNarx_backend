@@ -4,14 +4,17 @@ namespace App\Filament\Resources;
 
 use App\Enums\OfferStatus;
 use App\Filament\Resources\OfficialOfferResource\Pages;
+use App\Models\Brand;
+use App\Models\CarModel;
 use App\Models\OfficialOffer;
 use App\Services\OfficialOffers\OfficialOfferService;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class OfficialOfferResource extends Resource
 {
@@ -61,7 +64,7 @@ class OfficialOfferResource extends Resource
 
                         Forms\Components\Select::make('brand_id')
                             ->label('Marka')
-                            ->options(fn () => \App\Models\Brand::orderBy('name')->pluck('name', 'id'))
+                            ->options(fn () => Brand::orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->required()
                             ->live()
@@ -70,11 +73,11 @@ class OfficialOfferResource extends Resource
                         Forms\Components\Select::make('model_id')
                             ->label('Model')
                             ->options(fn (Forms\Get $get) => $get('brand_id')
-                                ? \App\Models\CarModel::query()
+                                ? CarModel::query()
                                     ->where('brand_id', $get('brand_id'))
                                     ->orderBy('name')
                                     ->pluck('name', 'id')
-                                : \App\Models\CarModel::query()->orderBy('name')->pluck('name', 'id'))
+                                : CarModel::query()->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->required(),
 
@@ -188,7 +191,7 @@ class OfficialOfferResource extends Resource
                     ->label('Amal qilish muddati')
                     ->dateTime('d.m.Y')
                     ->placeholder('Muddatsiz')
-                    ->color(fn (?\Carbon\Carbon $state) => $state && $state->isPast() ? 'danger' : null),
+                    ->color(fn (?Carbon $state) => $state && $state->isPast() ? 'danger' : null),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Qo\'shilgan')
@@ -242,7 +245,7 @@ class OfficialOfferResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->action(function (\Illuminate\Support\Collection $records): void {
+                    ->action(function (Collection $records): void {
                         $service = app(OfficialOfferService::class);
                         $records->each(fn (OfficialOffer $offer) => $service->publish($offer, auth()->id()));
                     })

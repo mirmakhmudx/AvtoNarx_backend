@@ -13,8 +13,7 @@ class OfficialOfferController extends Controller
 {
     public function __construct(
         private readonly OfficialOfferService $officialOfferService,
-    ) {
-    }
+    ) {}
 
     public function pending(): AnonymousResourceCollection
     {

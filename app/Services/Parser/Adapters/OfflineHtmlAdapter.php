@@ -12,6 +12,7 @@ use Symfony\Component\DomCrawler\Crawler;
 class OfflineHtmlAdapter
 {
     private const SOURCE_CODE = 'olx_uz';
+
     private const BASE_URL = 'https://www.olx.uz';
 
     public function __construct(
@@ -20,8 +21,7 @@ class OfflineHtmlAdapter
         private readonly UrlCanonicalizer $urlCanonicalizer,
         private readonly ExternalIdBuilder $externalIdBuilder,
         private readonly ContentHashBuilder $contentHashBuilder,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<int, array{item:array|null, rejected_reason:string|null}>
@@ -29,13 +29,13 @@ class OfflineHtmlAdapter
     public function extractFromFile(string $filePath): array
     {
         if (! file_exists($filePath)) {
-            throw new \RuntimeException('Fixture fayl topilmadi: ' . $filePath);
+            throw new \RuntimeException('Fixture fayl topilmadi: '.$filePath);
         }
 
         $html = file_get_contents($filePath);
         $crawler = new Crawler($html);
 
-        $results = array();
+        $results = [];
 
         $crawler->filter('.listing-card')->each(function (Crawler $card) use (&$results) {
             $results[] = $this->extractCard($card);
@@ -52,7 +52,7 @@ class OfflineHtmlAdapter
         $locationNode = $card->filter('.listing-location');
 
         if ($titleNode->count() === 0 || $priceNode->count() === 0 || $linkNode->count() === 0) {
-            return array('item' => null, 'rejected_reason' => 'missing_required_fields');
+            return ['item' => null, 'rejected_reason' => 'missing_required_fields'];
         }
 
         $titleText = trim($titleNode->text());
@@ -68,13 +68,13 @@ class OfflineHtmlAdapter
         $money = $this->moneyExtractor->extract($priceText);
 
         if ($money === null) {
-            return array('item' => null, 'rejected_reason' => 'invalid_price');
+            return ['item' => null, 'rejected_reason' => 'invalid_price'];
         }
 
         $vehicleNames = $this->splitBrandAndModel($titleText, $year);
 
         if ($vehicleNames === null) {
-            return array('item' => null, 'rejected_reason' => 'ambiguous_vehicle_name');
+            return ['item' => null, 'rejected_reason' => 'ambiguous_vehicle_name'];
         }
 
         $contentHash = $this->contentHashBuilder->build(
@@ -89,7 +89,7 @@ class OfflineHtmlAdapter
             'unknown',
         );
 
-        $item = array(
+        $item = [
             'source' => self::SOURCE_CODE,
             'external_id' => $externalId,
             'canonical_url' => $canonicalUrl,
@@ -102,9 +102,9 @@ class OfflineHtmlAdapter
             'seller_type' => 'unknown',
             'region' => $location,
             'content_hash' => $contentHash,
-        );
+        ];
 
-        return array('item' => $item, 'rejected_reason' => null);
+        return ['item' => $item, 'rejected_reason' => null];
     }
 
     /**
@@ -123,6 +123,6 @@ class OfflineHtmlAdapter
         $brand = $words[0];
         $model = $words[1];
 
-        return array('brand' => $brand, 'model' => $model);
+        return ['brand' => $brand, 'model' => $model];
     }
 }

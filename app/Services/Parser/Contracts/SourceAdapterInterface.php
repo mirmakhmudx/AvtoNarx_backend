@@ -9,5 +9,4 @@ interface SourceAdapterInterface
     public function discoverTargets(): array;
 
     public function extractFromUrl(string $url): array;
-
 }

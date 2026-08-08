@@ -39,6 +39,6 @@ class EnsureAdminTwoFactorConfirmed
             return $next($request);
         }
 
-        return redirect('/' . ltrim($setupPath, '/'));
+        return redirect('/'.ltrim($setupPath, '/'));
     }
 }

@@ -26,19 +26,19 @@ class ListingsOverTimeChartWidget extends ChartWidget
 
         $data = $days->map(fn (Carbon $day) => $counts->get($day->toDateString(), 0));
 
-        return array(
-            'datasets' => array(
-                array(
+        return [
+            'datasets' => [
+                [
                     'label' => 'Yangi e\'lonlar',
                     'data' => $data->values()->all(),
                     'borderColor' => '#10b981',
                     'backgroundColor' => 'rgba(16, 185, 129, 0.15)',
                     'fill' => true,
                     'tension' => 0.3,
-                ),
-            ),
+                ],
+            ],
             'labels' => $days->map(fn (Carbon $day) => $day->format('d.m'))->all(),
-        );
+        ];
     }
 
     protected function getType(): string

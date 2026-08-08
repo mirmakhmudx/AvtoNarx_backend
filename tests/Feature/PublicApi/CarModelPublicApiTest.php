@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->source = Source::create(array(
+    $this->source = Source::create([
         'code' => 'uzum_avto',
         'name' => 'Uzum Avto',
         'type' => 'manufacturer',
@@ -18,23 +18,23 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'official',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
-    $this->model = CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
+    $this->brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
+    $this->model = CarModel::create(['brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true]);
 });
 
-function makeOfficialOffer(array $overrides = array()): OfficialOffer
+function makeOfficialOffer(array $overrides = []): OfficialOffer
 {
     static $counter = 0;
     $counter++;
 
-    return OfficialOffer::create(array_merge(array(
+    return OfficialOffer::create(array_merge([
         'source_id' => test()->source->id,
         'brand_id' => test()->brand->id,
         'model_id' => test()->model->id,
-        'external_id' => 'offer-' . $counter,
+        'external_id' => 'offer-'.$counter,
         'price_amount' => 145_000_000,
         'currency' => 'UZS',
         'price_uzs' => 145_000_000,
@@ -42,12 +42,12 @@ function makeOfficialOffer(array $overrides = array()): OfficialOffer
         'publication_status' => 'published',
         'observed_at' => now(),
         'content_hash' => bin2hex(random_bytes(16)),
-    ), $overrides));
+    ], $overrides));
 }
 
-function makeStat(array $overrides = array()): MarketPriceStatistic
+function makeStat(array $overrides = []): MarketPriceStatistic
 {
-    return MarketPriceStatistic::create(array_merge(array(
+    return MarketPriceStatistic::create(array_merge([
         'brand_id' => test()->brand->id,
         'model_id' => test()->model->id,
         'year' => 2026,
@@ -65,7 +65,7 @@ function makeStat(array $overrides = array()): MarketPriceStatistic
         'period_to' => now(),
         'method_version' => '1.0',
         'calculated_at' => now(),
-    ), $overrides));
+    ], $overrides));
 }
 
 it('returns official_price and market_price in the TZ-specified shape on the model listing', function () {
@@ -77,19 +77,19 @@ it('returns official_price and market_price in the TZ-specified shape on the mod
     $response->assertOk();
     $item = $response->json('data.0');
 
-    expect($item['official_price'])->toHaveKeys(array('amount', 'currency', 'observed_at', 'source_url'));
+    expect($item['official_price'])->toHaveKeys(['amount', 'currency', 'observed_at', 'source_url']);
     expect($item['official_price']['amount'])->toBe(145_000_000);
     expect($item['official_price']['currency'])->toBe('UZS');
 
-    expect($item['market_price'])->toHaveKeys(array('amount', 'currency', 'statistic', 'sample_size', 'period_to', 'method_version'));
+    expect($item['market_price'])->toHaveKeys(['amount', 'currency', 'statistic', 'sample_size', 'period_to', 'method_version']);
     expect($item['market_price']['amount'])->toBe(140_000_000);
     expect($item['market_price']['statistic'])->toBe('median');
     expect($item['market_price']['sample_size'])->toBe(12);
 });
 
 it('picks the statistic with the largest sample_size as the representative market_price when no year is given', function () {
-    makeStat(array('year' => 2024, 'sample_size' => 10, 'median_price_uzs' => 100_000_000));
-    makeStat(array('year' => 2026, 'sample_size' => 30, 'median_price_uzs' => 150_000_000));
+    makeStat(['year' => 2024, 'sample_size' => 10, 'median_price_uzs' => 100_000_000]);
+    makeStat(['year' => 2026, 'sample_size' => 30, 'median_price_uzs' => 150_000_000]);
 
     $response = $this->getJson("/api/v1/brands/{$this->brand->slug}/models");
 
@@ -99,8 +99,8 @@ it('picks the statistic with the largest sample_size as the representative marke
 });
 
 it('filters official_price/market_price by year and returns null when nothing matches that year', function () {
-    makeOfficialOffer(array('year' => 2026, 'price_amount' => 145_000_000, 'price_uzs' => 145_000_000));
-    makeStat(array('year' => 2026, 'median_price_uzs' => 140_000_000));
+    makeOfficialOffer(['year' => 2026, 'price_amount' => 145_000_000, 'price_uzs' => 145_000_000]);
+    makeStat(['year' => 2026, 'median_price_uzs' => 140_000_000]);
 
     $matchingYear = $this->getJson("/api/v1/brands/{$this->brand->slug}/models?year=2026");
     $matchingYear->assertOk();
@@ -115,18 +115,18 @@ it('filters official_price/market_price by year and returns null when nothing ma
 
 it('paginates the model listing with a single, consistent pagination shape', function () {
     for ($i = 0; $i < 3; $i++) {
-        CarModel::create(array(
+        CarModel::create([
             'brand_id' => $this->brand->id,
-            'name' => 'Model ' . $i,
-            'slug' => 'model-' . $i,
+            'name' => 'Model '.$i,
+            'slug' => 'model-'.$i,
             'is_active' => true,
-        ));
+        ]);
     }
 
     $response = $this->getJson("/api/v1/brands/{$this->brand->slug}/models?page=1");
 
     $response->assertOk();
-    expect($response->json('meta'))->toHaveKeys(array('current_page', 'per_page', 'total', 'last_page'));
+    expect($response->json('meta'))->toHaveKeys(['current_page', 'per_page', 'total', 'last_page']);
     expect($response->json('meta.total'))->toBe(4);
     expect($response->json('meta.current_page'))->toBe(1);
 });
@@ -139,7 +139,7 @@ it('returns ETag and Last-Modified headers and responds 304 when If-None-Match m
     expect($etag)->not->toBeNull();
     expect($first->headers->get('Last-Modified'))->not->toBeNull();
 
-    $second = $this->withHeaders(array('If-None-Match' => $etag))
+    $second = $this->withHeaders(['If-None-Match' => $etag])
         ->getJson("/api/v1/brands/{$this->brand->slug}/models");
 
     $second->assertStatus(304);

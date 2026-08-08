@@ -25,7 +25,7 @@ class StatsOverviewWidget extends BaseWidget
         $pendingCandidates = UnmatchedBrandModelCandidate::where('status', 'pending')->count()
             + DiscoveredBrand::count();
 
-        return array(
+        return [
             Stat::make('Jami e\'lonlar', number_format($totalListings))
                 ->description('Bazadagi barcha faol e\'lonlar')
                 ->icon('heroicon-o-truck')
@@ -55,6 +55,6 @@ class StatsOverviewWidget extends BaseWidget
                 ->description('Rasmiy takliflar')
                 ->icon('heroicon-o-shield-check')
                 ->color($pendingOffers > 0 ? 'warning' : 'success'),
-        );
+        ];
     }
 }

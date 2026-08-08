@@ -45,21 +45,21 @@ class DecodeGzipRequest
         $decoded = @gzdecode($raw);
 
         if ($decoded === false) {
-            return response()->json(array(
-                'error' => array(
+            return response()->json([
+                'error' => [
                     'code' => 'invalid_gzip',
                     'message' => 'Content-Encoding: gzip ko\'rsatilgan, lekin tanani ochib bo\'lmadi.',
-                ),
-            ), 400);
+                ],
+            ], 400);
         }
 
         if (strlen($decoded) > $this->maxDecodedBytes()) {
-            return response()->json(array(
-                'error' => array(
+            return response()->json([
+                'error' => [
                     'code' => 'payload_too_large',
                     'message' => 'Ochilgan payload ruxsat etilgan hajmdan katta.',
-                ),
-            ), 413);
+                ],
+            ], 413);
         }
 
         // So'rov tanasini ochilgan kontent bilan almashtiramiz.

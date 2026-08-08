@@ -12,7 +12,7 @@ it('records created/updated/deleted audit logs for an admin action (TZ 14)', fun
     $this->actingAs($admin);
 
     // CREATED
-    $brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
+    $brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
 
     $createdLog = AuditLog::where('auditable_type', Brand::class)
         ->where('auditable_id', $brand->id)
@@ -25,7 +25,7 @@ it('records created/updated/deleted audit logs for an admin action (TZ 14)', fun
     expect($createdLog->new_values['name'])->toBe('Chevrolet');
 
     // UPDATED — eski va yangi qiymat yoziladi
-    $brand->update(array('name' => 'Chevrolet Renamed'));
+    $brand->update(['name' => 'Chevrolet Renamed']);
 
     $updatedLog = AuditLog::where('action', 'updated')->latest('id')->first();
 
@@ -44,7 +44,7 @@ it('records created/updated/deleted audit logs for an admin action (TZ 14)', fun
 
 it('does NOT record audit logs when there is no authenticated admin (e.g. ingestion/CLI)', function () {
     // actingAs YO'Q — ya'ni admin yo'q (parser/ingestion yozuvlari kabi).
-    Brand::create(array('name' => 'Ravon', 'slug' => 'ravon', 'is_active' => true, 'sort_order' => 2));
+    Brand::create(['name' => 'Ravon', 'slug' => 'ravon', 'is_active' => true, 'sort_order' => 2]);
 
     expect(AuditLog::count())->toBe(0);
 });
@@ -53,9 +53,9 @@ it('only stores changed fields (not the whole row) on update', function () {
     $admin = User::factory()->create();
     $this->actingAs($admin);
 
-    $brand = Brand::create(array('name' => 'BYD', 'slug' => 'byd', 'is_active' => true, 'sort_order' => 3));
+    $brand = Brand::create(['name' => 'BYD', 'slug' => 'byd', 'is_active' => true, 'sort_order' => 3]);
 
-    $brand->update(array('sort_order' => 99));
+    $brand->update(['sort_order' => 99]);
 
     $updatedLog = AuditLog::where('action', 'updated')->latest('id')->first();
 

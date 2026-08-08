@@ -9,7 +9,7 @@ class OfficialOfferResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        return array(
+        return [
             'id' => $this->id,
             'brand_id' => $this->brand_id,
             'model_id' => $this->model_id,
@@ -23,6 +23,6 @@ class OfficialOfferResource extends JsonResource
             'valid_to' => $this->valid_to ? $this->valid_to->toIso8601String() : null,
             'published_at' => $this->published_at ? $this->published_at->toIso8601String() : null,
             'verified_at' => $this->verified_at ? $this->verified_at->toIso8601String() : null,
-        );
+        ];
     }
 }

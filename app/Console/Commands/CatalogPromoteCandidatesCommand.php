@@ -79,16 +79,16 @@ class CatalogPromoteCandidatesCommand extends Command
                     continue;
                 }
 
-                $this->error("#{$candidate->id}: xato - " . $e->getMessage());
+                $this->error("#{$candidate->id}: xato - ".$e->getMessage());
                 $skipped++;
             } catch (\Throwable $e) {
-                $this->error("#{$candidate->id}: xato - " . $e->getMessage());
+                $this->error("#{$candidate->id}: xato - ".$e->getMessage());
                 $skipped++;
             }
         }
 
         $this->newLine();
-        $this->info("Jami: {$promoted} ta " . ($dryRun ? 'promote qilingan BO\'LARDI' : 'promote qilindi') . ", {$skipped} ta o'tkazib yuborildi.");
+        $this->info("Jami: {$promoted} ta ".($dryRun ? 'promote qilingan BO\'LARDI' : 'promote qilindi').", {$skipped} ta o'tkazib yuborildi.");
 
         return self::SUCCESS;
     }

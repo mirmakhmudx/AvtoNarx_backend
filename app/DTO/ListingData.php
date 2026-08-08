@@ -29,8 +29,7 @@ final class ListingData
         public readonly ?int $knownModelId = null,
         public readonly ?string $contentHash = null,
 
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -57,7 +56,7 @@ final class ListingData
 
     public function computeContentHash(): string
     {
-        return hash('sha256', implode('|', array(
+        return hash('sha256', implode('|', [
             $this->sourceId,
             $this->externalId,
             $this->canonicalUrl,
@@ -67,6 +66,6 @@ final class ListingData
             $this->priceAmount,
             $this->currency,
             $this->condition,
-        )));
+        ]));
     }
 }

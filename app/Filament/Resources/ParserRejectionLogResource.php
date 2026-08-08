@@ -79,7 +79,7 @@ class ParserRejectionLogResource extends Resource
 
                 Tables\Columns\TextColumn::make('brand_raw')
                     ->label('Marka / Model')
-                    ->formatStateUsing(fn (ParserRejectionLog $record): string => trim(($record->brand_raw ?? '—') . ' ' . ($record->model_raw ?? '')))
+                    ->formatStateUsing(fn (ParserRejectionLog $record): string => trim(($record->brand_raw ?? '—').' '.($record->model_raw ?? '')))
                     ->searchable(['brand_raw', 'model_raw']),
 
                 Tables\Columns\TextColumn::make('title_raw')
@@ -93,7 +93,7 @@ class ParserRejectionLogResource extends Resource
                 Tables\Columns\TextColumn::make('price_amount')
                     ->label('Narx')
                     ->formatStateUsing(fn (ParserRejectionLog $record): string => $record->price_amount !== null
-                        ? number_format($record->price_amount) . ' ' . $record->currency
+                        ? number_format($record->price_amount).' '.$record->currency
                         : '—'),
 
                 Tables\Columns\TextColumn::make('canonical_url')

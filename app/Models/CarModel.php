@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OfferStatus;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,7 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CarModel extends Model
 {
-    use \App\Models\Concerns\Auditable;
+    use Auditable;
+
     protected $table = 'car_models';
 
     protected $fillable = [

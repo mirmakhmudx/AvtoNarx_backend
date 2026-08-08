@@ -15,7 +15,7 @@ class ContentHashBuilder
         string $currency,
         string $condition,
     ): string {
-        $data = array(
+        $data = [
             'brand' => trim($brand),
             'canonical_url' => $canonicalUrl,
             'condition' => $condition,
@@ -25,7 +25,7 @@ class ContentHashBuilder
             'price_amount' => $priceAmount,
             'source' => $source,
             'year' => $year,
-        );
+        ];
 
         ksort($data);
 

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Brand;
 use App\Models\CarModel;
 use App\Models\CatalogAlias;
 use App\Models\MarketListing;
@@ -28,8 +29,8 @@ class MergeDaewooChevroletCommand extends Command
     {
         $dry = (bool) $this->option('dry-run');
 
-        $daewoo = \App\Models\Brand::where('name', 'Daewoo')->first();
-        $chevrolet = \App\Models\Brand::where('name', 'Chevrolet')->first();
+        $daewoo = Brand::where('name', 'Daewoo')->first();
+        $chevrolet = Brand::where('name', 'Chevrolet')->first();
 
         if (! $daewoo || ! $chevrolet) {
             $this->error('Daewoo yoki Chevrolet brendi topilmadi.');
@@ -75,7 +76,7 @@ class MergeDaewooChevroletCommand extends Command
         }
 
         $this->newLine();
-        $this->info(($dry ? '[DRY-RUN] ' : '') . "Birlashtirildi: {$merged}, tegilmadi: {$skipped}");
+        $this->info(($dry ? '[DRY-RUN] ' : '')."Birlashtirildi: {$merged}, tegilmadi: {$skipped}");
 
         if ($dry) {
             $this->comment('Bu faqat ko\'rsatuv edi. Haqiqiy birlashtirish uchun --dry-run\'siz ishga tushiring.');

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UnmatchedBrandModelCandidate extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'source_id',
         'brand_name_raw',
         'model_name_raw',
@@ -15,12 +15,12 @@ class UnmatchedBrandModelCandidate extends Model
         'status',
         'first_seen_at',
         'last_seen_at',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'first_seen_at' => 'datetime',
         'last_seen_at' => 'datetime',
-    );
+    ];
 
     public function source(): BelongsTo
     {

@@ -33,13 +33,12 @@ class CbuExchangeRateFetcher
 
     public function __construct(
         private readonly ExchangeRateService $exchangeRateService,
-    ) {
-    }
+    ) {}
 
     /**
-     * @return array<string, float>  Muvaffaqiyatli yangilangan valyutalar va ularning kursi
+     * @return array<string, float> Muvaffaqiyatli yangilangan valyutalar va ularning kursi
      *
-     * @throws \RuntimeException  API'dan javob kelmasa yoki kutilgan valyutalar topilmasa
+     * @throws \RuntimeException API'dan javob kelmasa yoki kutilgan valyutalar topilmasa
      */
     public function fetchAndStore(): array
     {
@@ -55,7 +54,7 @@ class CbuExchangeRateFetcher
             throw new \RuntimeException('cbu.uz API kutilmagan formatda javob qaytardi.');
         }
 
-        $updated = array();
+        $updated = [];
 
         foreach ($rows as $row) {
             $code = $row['Ccy'] ?? null;
