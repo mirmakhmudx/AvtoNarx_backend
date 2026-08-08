@@ -61,35 +61,35 @@ class OfficialOfferResource extends Resource
 
                         Forms\Components\Select::make('brand_id')
                             ->label('Marka')
-                            ->relationship('brand', 'name')
+                            ->options(fn () => \App\Models\Brand::orderBy('name')->pluck('name', 'id'))
                             ->searchable()
-                            ->preload()
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn (Forms\Set $set) => $set('model_id', null)),
 
                         Forms\Components\Select::make('model_id')
                             ->label('Model')
-                            ->relationship(
-                                name: 'carModel',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn (Builder $query, Forms\Get $get) => $get('brand_id')
-                                    ? $query->where('brand_id', $get('brand_id'))
-                                    : $query,
-                            )
+                            ->options(fn (Forms\Get $get) => $get('brand_id')
+                                ? \App\Models\CarModel::query()
+                                    ->where('brand_id', $get('brand_id'))
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                : \App\Models\CarModel::query()->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
-                            ->preload()
                             ->required(),
 
                         Forms\Components\TextInput::make('trim_name')
                             ->label('Komplektatsiya')
                             ->maxLength(120),
 
-                        Forms\Components\TextInput::make('year')
+                        Forms\Components\Select::make('year')
                             ->label('Yil')
-                            ->numeric()
-                            ->minValue(1950)
-                            ->maxValue((int) date('Y') + 1),
+                            ->options(array_combine(
+                                range((int) date('Y') + 1, 1950),
+                                range((int) date('Y') + 1, 1950),
+                            ))
+                            ->searchable()
+                            ->native(false),
 
                         Forms\Components\TextInput::make('external_id')
                             ->label('Tashqi ID')

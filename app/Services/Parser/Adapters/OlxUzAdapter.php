@@ -27,20 +27,14 @@ class OlxUzAdapter
     private const MAX_PAGES_PER_TARGET = 10;
     private const MAX_CONSECUTIVE_EMPTY_PAGES = 2;
 
-    // VAQTINCHALIK CHEKLOV (lokal kompyuterda sinov uchun): har bir target
-    // (brend+model) uchun 10 ta MUVAFFAQIYATLI element yig'ilgach, keyingi
-    // sahifalarga o'tilmaydi. REAL SERVERGA chiqarilganda bu qatorni
-    // albatta o'chirib tashlang (yoki juda katta songa o'zgartiring).
-    private const MAX_ITEMS_PER_TARGET = 10;
+
+    private const MAX_ITEMS_PER_TARGET = 30;
 
     private const PAGE_REQUEST_DELAY_SECONDS = 2;
     private const HTTP_TIMEOUT_SECONDS = 20;
     private const MAX_ATTEMPTS_PER_PAGE = 2;
     private const RETRY_DELAY_SECONDS = 3;
 
-    // Detail sahifaga (bitta e'lonning to'liq sahifasi) so'rov yuborishdan
-    // oldingi kutish — bu qo'shimcha, kartochka sahifalaridan alohida
-    // so'rov, shuning uchun alohida (kichikroq) kutish beriladi.
     private const DETAIL_PAGE_REQUEST_DELAY_SECONDS = 1;
 
     public function __construct(

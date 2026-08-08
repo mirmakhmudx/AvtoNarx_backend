@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'fix/**', 'feat/**']
+  pull_request:
+
+# Bir branch uchun eski ishga tushishlarni bekor qilamiz (resurs tejash).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Pint · PHPStan · Tests · Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, intl, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # 2-qadam: kod stili
+      - name: Code style (Pint)
+        run: vendor/bin/pint --test
+
+      # 3-qadam: statik tahlil
+      - name: Static analysis (PHPStan)
+        run: composer analyse
+
+      # 4 + 5-qadam: testlar (OpenApiSpecTest OpenAPI validatsiyasini ham o'z ichiga oladi)
+      - name: Tests (Pest)
+        run: php artisan test
+
+      # Dependency xavfsizlik auditi (§16). Ma'lumot uchun — bloklamaydi.
+      - name: Dependency security audit
+        run: composer audit --no-interaction || true
+
+  openapi-lint:
+    name: OpenAPI lint (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Redocly lint
+        run: npx --yes @redocly/cli@latest lint docs/openapi.yaml
