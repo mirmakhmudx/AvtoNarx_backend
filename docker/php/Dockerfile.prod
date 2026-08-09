@@ -1,0 +1,71 @@
+# syntax=docker/dockerfile:1
+# AvtoNarx — PRODUCTION image: kod + prod bog'liqliklar + opcache ichiga olinadi.
+
+FROM php:8.4-fpm-alpine
+
+RUN apk add --no-cache \
+    postgresql-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    oniguruma-dev \
+    icu-dev \
+    libxml2-dev \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    chromium \
+    chromium-chromedriver
+
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+        pdo \
+        pdo_pgsql \
+        mbstring \
+        zip \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        intl \
+        opcache
+
+# Production opcache — timestamp tekshiruvi o'chirilgan (tezlik uchun).
+RUN { \
+      echo 'opcache.enable=1'; \
+      echo 'opcache.enable_cli=0'; \
+      echo 'opcache.memory_consumption=128'; \
+      echo 'opcache.interned_strings_buffer=16'; \
+      echo 'opcache.max_accelerated_files=20000'; \
+      echo 'opcache.validate_timestamps=0'; \
+    } > /usr/local/etc/php/conf.d/zz-opcache.ini
+
+COPY docker/php/conf.d/custom.ini /usr/local/etc/php/conf.d/zz-custom.ini
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+ENV PANTHER_NO_SANDBOX=1
+ENV PANTHER_CHROME_ARGUMENTS="--headless --disable-gpu --disable-dev-shm-usage"
+ENV PANTHER_CHROME_DRIVER_BINARY=/usr/bin/chromedriver
+
+WORKDIR /var/www/html
+
+# 1) Avval faqat bog'liqlik fayllari — Docker kesh qatlamidan foydalanish uchun.
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
+
+# 2) Butun kod.
+COPY . .
+
+# 3) Optimizatsiyalangan autoloader (prod).
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
+
+RUN addgroup -g 1000 avtonarx && adduser -G avtonarx -u 1000 -D avtonarx \
+    && chown -R avtonarx:avtonarx /var/www/html
+
+USER avtonarx
+
+EXPOSE 9000
+
+CMD ["php-fpm"]

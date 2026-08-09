@@ -2,26 +2,26 @@
 
 namespace App\Services\Parser\Adapters;
 
-use App\DTO\OfficialOfferData;
+use App\DTO\ListingData;
 use App\Models\Source;
 use App\Services\Parser\Extraction\ContentHashBuilder;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * TZ (Parser) "Этап 3. Official adapter — Uzum Avto → official_offers".
- * Uzum Avto rasmiy narxlarini oladi va OfficialOfferData ko'rinishiga o'tkazadi.
+ * Uzum Avto (webview.uzumavto.uz) — bu ISHLATILGAN mashinalar BOZORI (OLX kabi),
+ * ishlab chiqaruvchi/salon EMAS. Shu sabab adapter market_listings uchun
+ * ListingData ishlab chiqaradi (condition = used), OfficialOffer emas.
  *
- * webview.uzumavto.uz — ilova ichidagi webview JSON API. Endpoint va struktura
- * manba sozlamalaridan olinadi (kod o'zgartirmasdan moslash mumkin):
- *   settings.catalog_endpoint  — to'liq URL
- *   settings.json_path         — modellar ro'yxati JSON ichida qayerda ("data.models")
+ * Endpoint va struktura manba sozlamalaridan olinadi:
+ *   settings.catalog_endpoint  — feed/list API to'liq URL (majburiy)
+ *   settings.json_path         — e'lonlar ro'yxati JSON ichida qayerda ("data.items")
  */
 class UzumAvtoAdapter
 {
     private const SOURCE_CODE = 'uzum_avto';
 
-    private const CONDITION = 'new';
+    private const CONDITION = 'used';
 
     private const DEFAULT_CURRENCY = 'UZS';
 
@@ -45,7 +45,7 @@ class UzumAvtoAdapter
         $response = Http::timeout(self::REQUEST_TIMEOUT)
             ->withHeaders([
                 'Accept' => 'application/json',
-                'User-Agent' => 'AvtoNarx/1.0 (+official-price-collector)',
+                'User-Agent' => 'AvtoNarx/1.0 (+market-price-collector)',
             ])
             ->get($endpoint);
 
@@ -62,90 +62,81 @@ class UzumAvtoAdapter
         return $json;
     }
 
-    /** @return array<int, OfficialOfferData> */
-    public function fetchOfficialOffers(Source $source, ?string $overrideUrl = null): array
+    /** @return array<int, ListingData> */
+    public function fetchListings(Source $source, ?string $overrideUrl = null): array
     {
-        return $this->mapCatalog($this->fetchRaw($source, $overrideUrl), $source);
+        return $this->mapListings($this->fetchRaw($source, $overrideUrl), $source);
     }
 
     /**
-     * ⚠️ MOSLASH KERAK BO'LGAN YAGONA JOY — Uzum JSON'ini OfficialOfferData'ga
+     * ⚠️ MOSLASH KERAK BO'LGAN YAGONA JOY — Uzum JSON'ini ListingData'ga
      * o'tkazadi. Haqiqiy JSON boshqacha bo'lsa, faqat shu metod ichini
      * o'zgartiring; qolgan hamma narsa o'zgarishsiz ishlaydi.
      *
      * @param  array<string, mixed>  $json
-     * @return array<int, OfficialOfferData>
+     * @return array<int, ListingData>
      */
-    public function mapCatalog(array $json, Source $source): array
+    public function mapListings(array $json, Source $source): array
     {
-        $models = $this->extractModelList($json, $source);
-        $offers = [];
-        $observedAt = new \DateTimeImmutable('now');
+        $items = $this->extractItemList($json, $source);
+        $listings = [];
+        $observedAt = now()->toIso8601String();
 
-        foreach ($models as $model) {
-            if (! is_array($model)) {
+        foreach ($items as $item) {
+            if (! is_array($item)) {
                 continue;
             }
 
-            $brand = (string) ($model['brand'] ?? $model['brand_name'] ?? 'Chevrolet');
-            $modelName = (string) ($model['name'] ?? $model['model'] ?? $model['title'] ?? '');
-            $modelUrl = (string) ($model['url'] ?? $source->base_url);
+            $externalId = (string) ($item['id'] ?? $item['external_id'] ?? $item['uuid'] ?? '');
+            $brand = (string) ($item['brand'] ?? $item['brand_name'] ?? '');
+            $model = (string) ($item['model'] ?? $item['model_name'] ?? $item['title'] ?? '');
+            $price = $this->extractPrice($item);
 
-            if ($modelName === '') {
+            if ($externalId === '' || $model === '' || $price <= 0) {
                 continue;
             }
 
-            $modifications = $model['modifications'] ?? $model['trims'] ?? $model['variants'] ?? null;
+            $url = (string) ($item['url'] ?? ($source->base_url.'/uz/details/'.$externalId));
+            $year = isset($item['year']) ? (int) $item['year'] : null;
+            $region = $item['region'] ?? ($item['location']['region'] ?? null);
 
-            if (is_array($modifications) && $modifications !== []) {
-                foreach ($modifications as $mod) {
-                    if (! is_array($mod)) {
-                        continue;
-                    }
-
-                    $offer = $this->buildOffer(
-                        source: $source,
-                        brand: $brand,
-                        modelName: $modelName,
-                        trim: (string) ($mod['name'] ?? $mod['title'] ?? ''),
-                        year: isset($mod['year']) ? (int) $mod['year'] : (isset($model['year']) ? (int) $model['year'] : null),
-                        priceAmount: $this->extractPrice($mod),
-                        url: (string) ($mod['url'] ?? $modelUrl),
-                        observedAt: $observedAt,
-                    );
-
-                    if ($offer !== null) {
-                        $offers[] = $offer;
-                    }
-                }
-
-                continue;
-            }
-
-            $offer = $this->buildOffer(
-                source: $source,
-                brand: $brand,
-                modelName: $modelName,
-                trim: null,
-                year: isset($model['year']) ? (int) $model['year'] : null,
-                priceAmount: $this->extractPrice($model),
-                url: $modelUrl,
-                observedAt: $observedAt,
+            $contentHash = $this->contentHashBuilder->build(
+                self::SOURCE_CODE,
+                $externalId,
+                $url,
+                $brand,
+                $model,
+                $year,
+                $price,
+                self::DEFAULT_CURRENCY,
+                self::CONDITION,
             );
 
-            if ($offer !== null) {
-                $offers[] = $offer;
-            }
+            $listings[] = ListingData::fromArray([
+                'source_id' => $source->id,
+                'external_id' => $externalId,
+                'canonical_url' => $url,
+                'brand_raw' => $brand !== '' ? $brand : null,
+                'model_raw' => $model,
+                'year' => $year,
+                'price_amount' => $price,
+                'currency' => self::DEFAULT_CURRENCY,
+                'condition' => self::CONDITION,
+                'seller_type' => (string) ($item['seller_type'] ?? 'unknown'),
+                'region' => $region,
+                'source_published_at' => $observedAt,
+                'content_hash' => $contentHash,
+            ]);
         }
 
-        return $offers;
+        return $listings;
     }
 
     /**
      * @param  array<string, mixed>  $json
      * @return array<int, mixed>
      */
-    private function extractModelList(array $json, Source $source): array
+    private function extractItemList(array $json, Source $source): array
     {
         $path = $source->settings['json_path'] ?? null;
 
@@ -161,10 +152,10 @@ class UzumAvtoAdapter
             return is_array($node) ? $node : [];
         }
 
-        foreach (['models', 'data', 'items', 'result', 'catalog'] as $key) {
+        foreach (['items', 'data', 'results', 'feed', 'listings'] as $key) {
             if (isset($json[$key]) && is_array($json[$key])) {
-                if ($key === 'data' && isset($json[$key]['models']) && is_array($json[$key]['models'])) {
-                    return $json[$key]['models'];
+                if ($key === 'data' && isset($json[$key]['items']) && is_array($json[$key]['items'])) {
+                    return $json[$key]['items'];
                 }
 
                 return $json[$key];
@@ -180,7 +171,6 @@ class UzumAvtoAdapter
         $candidates = [
             $row['price'] ?? null,
             $row['price_amount'] ?? null,
-            $row['min_price'] ?? null,
             $row['cost'] ?? null,
         ];
 
@@ -202,51 +192,5 @@ class UzumAvtoAdapter
         }
 
         return 0;
-    }
-
-    private function buildOffer(
-        Source $source,
-        string $brand,
-        string $modelName,
-        ?string $trim,
-        ?int $year,
-        int $priceAmount,
-        string $url,
-        \DateTimeImmutable $observedAt,
-    ): ?OfficialOfferData {
-        if ($priceAmount <= 0) {
-            return null;
-        }
-
-        $trimName = ($trim !== null && trim($trim) !== '') ? trim($trim) : null;
-
-        $externalId = 'uzum-'.mb_strtolower(
-            preg_replace('/[^a-zA-Z0-9]+/', '-', $modelName.'-'.($trimName ?? '').'-'.($year ?? ''))
-        );
-
-        $contentHash = $this->contentHashBuilder->build(
-            self::SOURCE_CODE,
-            $externalId,
-            $url,
-            $brand,
-            $modelName,
-            $year,
-            $priceAmount,
-            self::DEFAULT_CURRENCY,
-            self::CONDITION,
-        );
-
-        return OfficialOfferData::fromArray([
-            'source_id' => $source->id,
-            'external_id' => $externalId,
-            'url' => $url,
-            'brand' => $brand,
-            'model' => $modelName,
-            'trim' => $trimName,
-            'year' => $year,
-            'price' => ['amount' => $priceAmount, 'currency' => self::DEFAULT_CURRENCY],
-            'observed_at' => $observedAt->format(DATE_ATOM),
-            'content_hash' => $contentHash,
-        ]);
     }
 }

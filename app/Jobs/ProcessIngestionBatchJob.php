@@ -6,6 +6,7 @@ use App\DTO\ListingData;
 use App\Exceptions\SuspiciousListingRejectedException;
 use App\Models\IngestionBatch;
 use App\Models\IngestionItemError;
+use App\Services\Alerts\IngestionAlertService;
 use App\Services\MarketListings\ListingIngestionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -160,6 +161,8 @@ class ProcessIngestionBatchJob implements ShouldQueue
             });
 
             \Sentry\captureException($e);
+            app(IngestionAlertService::class)
+                ->batchFailed($batch, class_basename($e).': '.Str::limit($e->getMessage(), 200));
         }
     }
 }

@@ -1,0 +1,36 @@
+# VCS
+.git
+.gitignore
+.github
+
+# Bog'liqliklar (image ichida composer install qiladi)
+/vendor
+/node_modules
+
+# Muhit va sirlar — HECH QACHON image'ga kirmasin
+.env
+.env.*
+!.env.example
+
+# Ishlab chiqish / test
+/tests
+/.phpunit.cache
+phpunit.xml
+.phpunit.result.cache
+
+# Docker/local
+docker-compose.yml
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+*.log
+
+# Hujjatlar (image uchun kerak emas)
+*.md
+!README.md

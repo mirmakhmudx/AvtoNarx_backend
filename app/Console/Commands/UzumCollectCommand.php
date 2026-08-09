@@ -3,20 +3,27 @@
 namespace App\Console\Commands;
 
 use App\Models\Source;
-use App\Services\OfficialOffers\OfficialOfferIngestionService;
+use App\Services\MarketListings\ListingIngestionService;
 use App\Services\Parser\Adapters\UzumAvtoAdapter;
 use Illuminate\Console\Command;
 
+/**
+ * Uzum Avto BOZOR e'lonlarini qo'lda yig'ish + tekshirish (market_listings).
+ *
+ *   uzum:collect --raw --url="..."   → xom JSON'ni ko'rsatadi (mapping'ni moslash uchun)
+ *   uzum:collect --dry-run           → topilgan e'lonlarni ko'rsatadi, saqlamaydi
+ *   uzum:collect                     → yig'adi va market_listings'ga saqlaydi
+ */
 class UzumCollectCommand extends Command
 {
     protected $signature = 'uzum:collect
         {--url= : Endpoint\'ni majburan belgilash (aks holda source.settings.catalog_endpoint)}
         {--raw : Uzum\'ning xom JSON javobini chiqarish (debug/mapping uchun)}
-        {--dry-run : Bazaga yozmasdan, faqat topilgan takliflarni ko\'rsatish}';
+        {--dry-run : Bazaga yozmasdan, faqat topilgan e\'lonlarni ko\'rsatish}';
 
-    protected $description = 'Uzum Avto rasmiy narxlarini yig\'adi (official_offers).';
+    protected $description = 'Uzum Avto bozor e\'lonlarini yig\'adi (market_listings).';
 
-    public function handle(UzumAvtoAdapter $adapter, OfficialOfferIngestionService $ingestion): int
+    public function handle(UzumAvtoAdapter $adapter, ListingIngestionService $ingestion): int
     {
         $source = Source::where('code', 'uzum_avto')->first();
 
@@ -36,32 +43,27 @@ class UzumCollectCommand extends Command
                 return self::SUCCESS;
             }
 
-            $offers = $adapter->fetchOfficialOffers($source, $url);
+            $listings = $adapter->fetchListings($source, $url);
         } catch (\Throwable $e) {
             $this->error('Xato: '.$e->getMessage());
 
             return self::FAILURE;
         }
 
-        $this->info(count($offers).' ta taklif topildi.');
+        $this->info(count($listings)." ta e'lon topildi.");
 
         if ($this->option('dry-run')) {
-            foreach (array_slice($offers, 0, 25) as $o) {
+            foreach (array_slice($listings, 0, 25) as $l) {
                 $this->line(sprintf(
-                    '  %s %s %s %s — %s %s',
-                    $o->brandRaw,
-                    $o->modelRaw,
-                    $o->trimName ?? '',
-                    $o->year ?? '',
-                    number_format($o->priceAmount),
-                    $o->currency,
+                    '  %s %s %s — %s %s [%s]',
+                    $l->brandRaw ?? '',
+                    $l->modelRaw ?? '',
+                    $l->year ?? '',
+                    number_format($l->priceAmount),
+                    $l->currency,
+                    $l->region ?? '—',
                 ));
             }
-
-            if (count($offers) > 25) {
-                $this->comment('  ... va yana '.(count($offers) - 25).' ta.');
-            }
-
             $this->comment('DRY-RUN — bazaga yozilmadi.');
 
             return self::SUCCESS;
@@ -70,18 +72,16 @@ class UzumCollectCommand extends Command
         $accepted = 0;
         $rejected = 0;
 
-        foreach ($offers as $o) {
+        foreach ($listings as $l) {
             try {
-                $ingestion->ingest($o);
+                $ingestion->ingest($l);
                 $accepted++;
             } catch (\Throwable $e) {
                 $rejected++;
-                $this->warn("  RAD: {$o->modelRaw} — {$e->getMessage()}");
             }
         }
 
-        $this->info("✓ Qabul qilindi: {$accepted}, rad etildi: {$rejected}.");
-        $this->line('  (Yangi/o\'zgargan takliflar "pending" — admin panelda nashr eting, yoki source.settings.auto_publish=true qiling.)');
+        $this->info("✓ Qabul: {$accepted}, rad: {$rejected}.");
 
         return self::SUCCESS;
     }
