@@ -71,10 +71,7 @@ class StatsOverviewWidget extends BaseWidget
         ];
     }
 
-    /**
-     * @param  class-string<Model>  $model
-     * @return array<int, int>
-     */
+
     private function dailySeries(string $model, int $days = 7): array
     {
         $counts = $model::query()
@@ -88,21 +85,21 @@ class StatsOverviewWidget extends BaseWidget
             ->all();
     }
 
-    /**
-     * @return array{0: string, 1: string, 2: string}
-     */
+
     private function trend(int $today, int $yesterday): array
     {
         if ($yesterday === 0) {
-            return ['heroicon-m-sparkles', $today > 0 ? 'success' : 'gray', 'Bugun qo\'shilgan'];
+            return ['heroicon-m-sparkles', $today > 0 ? 'success' : 'gray', __('Bugun qo\'shilgan')];
         }
 
         $diff = (int) round((($today - $yesterday) / $yesterday) * 100);
 
-        if ($diff >= 0) {
-            return ['heroicon-m-arrow-trending-up', 'success', "Kechaga nisbatan +{$diff}%"];
-        }
+        $change = ($diff >= 0 ? '+' : '') . $diff;
 
-        return ['heroicon-m-arrow-trending-down', 'danger', "Kechaga nisbatan {$diff}%"];
+        return [
+            $diff >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down',
+            $diff >= 0 ? 'success' : 'danger',
+            __('Kechaga nisbatan :change%', ['change' => $change]),
+        ];
     }
 }

@@ -186,5 +186,9 @@
     "Tasdiqlanmagan": "Unverified",
     "Ishlatilgan": "Used",
     "Tasdiqlangan": "Verified",
-    "Hali ishlamagan": "Not run yet"
+    "Hali ishlamagan": "Not run yet",
+    "Ikkalasi ham": "Both",
+    "Faqat bozor": "Market only",
+    "Faqat salon": "Dealer only",
+    "Kechaga nisbatan :change%": "vs yesterday :change%"
 }

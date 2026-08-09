@@ -186,5 +186,9 @@
     "Tasdiqlanmagan": "Не подтверждено",
     "Ishlatilgan": "Б/у",
     "Tasdiqlangan": "Подтверждено",
-    "Hali ishlamagan": "Ещё не запускался"
+    "Hali ishlamagan": "Ещё не запускался",
+    "Ikkalasi ham": "Оба",
+    "Faqat bozor": "Только рынок",
+    "Faqat salon": "Только салон",
+    "Kechaga nisbatan :change%": "По сравнению со вчера :change%"
 }
