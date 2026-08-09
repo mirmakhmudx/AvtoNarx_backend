@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\TranslatesLabels;
 use App\Filament\Resources\UnmatchedBrandModelCandidateResource\Pages;
 use App\Models\Brand;
 use App\Models\UnmatchedBrandModelCandidate;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 
 class UnmatchedBrandModelCandidateResource extends Resource
 {
+    use TranslatesLabels;
+
     protected static ?string $model = UnmatchedBrandModelCandidate::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-question-mark-circle';
@@ -52,22 +55,22 @@ class UnmatchedBrandModelCandidateResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('brand_name_raw')
-                    ->label('Marka (xom)')
+                    ->label(__('Marka (xom)'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('model_name_raw')
-                    ->label('Model (xom)')
+                    ->label(__('Model (xom)'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('source.name')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Holat')
+                    ->label(__('Holat'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'warning',
@@ -77,14 +80,14 @@ class UnmatchedBrandModelCandidateResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('discovered_url')
-                    ->label('Havola')
+                    ->label(__('Havola'))
                     ->url(fn (UnmatchedBrandModelCandidate $record): string => $record->discovered_url)
                     ->openUrlInNewTab()
-                    ->formatStateUsing(fn () => 'Ko\'rish')
+                    ->formatStateUsing(fn () => __('Ko\'rish'))
                     ->color('primary'),
 
                 Tables\Columns\TextColumn::make('first_seen_at')
-                    ->label('Birinchi ko\'rilgan')
+                    ->label(__('Birinchi ko\'rilgan'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -92,16 +95,16 @@ class UnmatchedBrandModelCandidateResource extends Resource
             ->defaultSort('first_seen_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Holat')
+                    ->label(__('Holat'))
                     ->options([
-                        'pending' => 'Kutmoqda',
-                        'resolved' => 'Hal qilingan',
+                        'pending' => __('Kutmoqda'),
+                        'resolved' => __('Hal qilingan'),
                         'ignored' => 'E\'tiborsiz qoldirilgan',
                     ])
                     ->default('pending'),
 
                 Tables\Filters\SelectFilter::make('brand_name_raw')
-                    ->label('Marka')
+                    ->label(__('Marka'))
                     ->options(fn () => UnmatchedBrandModelCandidate::query()
                         ->where('status', 'pending')
                         ->distinct()
@@ -112,31 +115,31 @@ class UnmatchedBrandModelCandidateResource extends Resource
             ])
             ->actions([
                 Tables\Actions\Action::make('resolve')
-                    ->label('Hal qilish')
+                    ->label(__('Hal qilish'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (UnmatchedBrandModelCandidate $record): bool => $record->status === 'pending')
                     ->form(fn (UnmatchedBrandModelCandidate $record) => [
                         Forms\Components\Select::make('brand_id')
-                            ->label('Qaysi markaga tegishli')
+                            ->label(__('Qaysi markaga tegishli'))
                             ->options(Brand::query()->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->required(),
 
                         Forms\Components\TextInput::make('model_name')
-                            ->label('Model nomi')
+                            ->label(__('Model nomi'))
                             ->default($record->model_name_raw)
                             ->required()
                             ->maxLength(180),
 
                         Forms\Components\TextInput::make('model_slug')
-                            ->label('Model slug')
+                            ->label(__('Model slug'))
                             ->default(Str::slug($record->model_name_raw))
                             ->required()
                             ->maxLength(180),
 
                         Forms\Components\TextInput::make('production_from')
-                            ->label('Ishlab chiqarish boshlangan yil')
+                            ->label(__('Ishlab chiqarish boshlangan yil'))
                             ->numeric()
                             ->minValue(1950)
                             ->maxValue((int) date('Y') + 1),
@@ -153,7 +156,7 @@ class UnmatchedBrandModelCandidateResource extends Resource
                     ->successNotificationTitle('Model yaratildi va parser nishoni faollashtirildi'),
 
                 Tables\Actions\Action::make('ignore')
-                    ->label('E\'tiborsiz qoldirish')
+                    ->label(__('E\'tiborsiz qoldirish'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -162,7 +165,7 @@ class UnmatchedBrandModelCandidateResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('bulk_ignore')
-                    ->label('Tanlanganlarni e\'tiborsiz qoldirish')
+                    ->label(__('Tanlanganlarni e\'tiborsiz qoldirish'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()

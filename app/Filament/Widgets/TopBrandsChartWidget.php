@@ -2,14 +2,19 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Concerns\TranslatesWidgetLabels;
 use App\Models\MarketListing;
 use Filament\Widgets\ChartWidget;
 
 class TopBrandsChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Top 10 marka (e\'lonlar soni bo\'yicha)';
+    use TranslatesWidgetLabels;
 
-    protected static ?int $sort = -1;
+    protected static ?string $heading = 'Top 10 marka';
+
+    protected static ?string $description = 'E\'lonlar soni bo\'yicha';
+
+    protected static ?int $sort = 1;
 
     protected int|string|array $columnSpan = 1;
 
@@ -23,12 +28,16 @@ class TopBrandsChartWidget extends ChartWidget
             ->limit(10)
             ->get();
 
+        $palette = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#a855f7', '#14b8a6'];
+
         return [
             'datasets' => [
                 [
                     'label' => 'E\'lonlar soni',
                     'data' => $rows->pluck('total')->all(),
-                    'backgroundColor' => '#f59e0b',
+                    'backgroundColor' => array_slice($palette, 0, $rows->count()),
+                    'borderRadius' => 6,
+                    'borderSkipped' => false,
                 ],
             ],
             'labels' => $rows->pluck('brand_name')->all(),
@@ -44,8 +53,10 @@ class TopBrandsChartWidget extends ChartWidget
     {
         return [
             'indexAxis' => 'y',
-            'plugins' => [
-                'legend' => ['display' => false],
+            'plugins' => ['legend' => ['display' => false]],
+            'scales' => [
+                'x' => ['grid' => ['display' => true, 'color' => 'rgba(148,163,184,0.12)']],
+                'y' => ['grid' => ['display' => false]],
             ],
         ];
     }

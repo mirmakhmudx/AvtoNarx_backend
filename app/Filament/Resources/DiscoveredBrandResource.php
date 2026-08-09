@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\TranslatesLabels;
 use App\Filament\Resources\DiscoveredBrandResource\Pages;
 use App\Models\Brand;
 use App\Models\DiscoveredBrand;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 
 class DiscoveredBrandResource extends Resource
 {
+    use TranslatesLabels;
+
     protected static ?string $model = DiscoveredBrand::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-sparkles';
@@ -52,35 +55,35 @@ class DiscoveredBrandResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Topilgan nom')
+                    ->label(__('Topilgan nom'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('source.name')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('discovered_url')
-                    ->label('Havola')
+                    ->label(__('Havola'))
                     ->url(fn (DiscoveredBrand $record): string => $record->discovered_url)
                     ->openUrlInNewTab()
-                    ->formatStateUsing(fn () => 'Ko\'rish')
+                    ->formatStateUsing(fn () => __('Ko\'rish'))
                     ->color('primary'),
 
                 Tables\Columns\IconColumn::make('last_models_checked_at')
-                    ->label('Modellari tekshirilganmi')
+                    ->label(__('Modellari tekshirilganmi'))
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-clock')
                     ->getStateUsing(fn (DiscoveredBrand $record): bool => $record->last_models_checked_at !== null),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Birinchi topilgan')
+                    ->label(__('Birinchi topilgan'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -88,42 +91,42 @@ class DiscoveredBrandResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('source_id')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->relationship('source', 'name'),
 
                 Tables\Filters\Filter::make('not_checked')
-                    ->label('Modellari hali tekshirilmagan')
+                    ->label(__('Modellari hali tekshirilmagan'))
                     ->query(fn ($query) => $query->whereNull('last_models_checked_at')),
             ])
             ->actions([
                 Tables\Actions\Action::make('resolve')
-                    ->label('Katalogga qo\'shish')
+                    ->label(__('Katalogga qo\'shish'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->form(fn (DiscoveredBrand $record) => [
                         Forms\Components\Select::make('existing_brand_id')
-                            ->label('Mavjud markaga bog\'lash')
-                            ->helperText('Agar bu marka katalogda boshqa nom bilan allaqachon mavjud bo\'lsa, shu yerdan tanlang — aks holda pastdagi ma\'lumotlar bilan yangi marka yaratiladi')
+                            ->label(__('Mavjud markaga bog\'lash'))
+                            ->helperText(__('Agar bu marka katalogda boshqa nom bilan allaqachon mavjud bo\'lsa, shu yerdan tanlang — aks holda pastdagi ma\'lumotlar bilan yangi marka yaratiladi'))
                             ->options(Brand::query()->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->live(),
 
                         Forms\Components\TextInput::make('name')
-                            ->label('Yangi marka nomi')
+                            ->label(__('Yangi marka nomi'))
                             ->default($record->name)
                             ->required()
                             ->maxLength(100)
                             ->hidden(fn (Forms\Get $get) => filled($get('existing_brand_id'))),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->default(Str::slug($record->name))
                             ->required()
                             ->maxLength(120)
                             ->hidden(fn (Forms\Get $get) => filled($get('existing_brand_id'))),
 
                         Forms\Components\TextInput::make('country_code')
-                            ->label('Davlat kodi')
+                            ->label(__('Davlat kodi'))
                             ->maxLength(2)
                             ->hidden(fn (Forms\Get $get) => filled($get('existing_brand_id'))),
                     ])
@@ -139,7 +142,7 @@ class DiscoveredBrandResource extends Resource
                     ->successNotificationTitle('Marka katalogga qo\'shildi'),
 
                 Tables\Actions\Action::make('ignore')
-                    ->label('E\'tiborsiz qoldirish')
+                    ->label(__('E\'tiborsiz qoldirish'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -147,7 +150,7 @@ class DiscoveredBrandResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('bulk_ignore')
-                    ->label('Tanlanganlarni e\'tiborsiz qoldirish')
+                    ->label(__('Tanlanganlarni e\'tiborsiz qoldirish'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()

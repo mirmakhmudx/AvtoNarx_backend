@@ -24,32 +24,32 @@ class CarModelsRelationManager extends RelationManager
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
-                    ->label('Nomi')
+                    ->label(__('Nomi'))
                     ->required()
                     ->maxLength(120)
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (Forms\Set $set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
 
                 Forms\Components\TextInput::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->required()
                     ->maxLength(140),
 
                 Forms\Components\TextInput::make('production_from')
-                    ->label('Ishlab chiqarish boshlangan yil')
+                    ->label(__('Ishlab chiqarish boshlangan yil'))
                     ->numeric()
                     ->minValue(1950)
                     ->maxValue((int) date('Y') + 1),
 
                 Forms\Components\TextInput::make('production_to')
-                    ->label('Ishlab chiqarish tugagan yil')
+                    ->label(__('Ishlab chiqarish tugagan yil'))
                     ->numeric()
                     ->minValue(1950)
                     ->maxValue((int) date('Y') + 1)
-                    ->helperText('Hozir ham ishlab chiqarilsa — bo\'sh qoldiring'),
+                    ->helperText(__('Hozir ham ishlab chiqarilsa — bo\'sh qoldiring')),
 
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Faol')
+                    ->label(__('Faol'))
                     ->default(true)
                     ->columnSpanFull(),
             ])
@@ -62,28 +62,28 @@ class CarModelsRelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nomi')
+                    ->label(__('Nomi'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('production_from')
-                    ->label('Yillar')
+                    ->label(__('Yillar'))
                     ->formatStateUsing(fn ($state, $record) => $state
                         ? $state.' — '.($record->production_to ?? 'hozirgacha')
                         : '—'),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Faol')
+                    ->label(__('Faol'))
                     ->boolean(),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Faol'),
+                    ->label(__('Faol')),
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make(),

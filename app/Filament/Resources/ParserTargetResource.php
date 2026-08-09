@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\TranslatesLabels;
 use App\Filament\Resources\ParserTargetResource\Pages;
 use App\Models\ParserTarget;
 use Filament\Forms;
@@ -14,6 +15,8 @@ use Illuminate\Support\Collection;
 
 class ParserTargetResource extends Resource
 {
+    use TranslatesLabels;
+
     protected static ?string $model = ParserTarget::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-map-pin';
@@ -44,14 +47,14 @@ class ParserTargetResource extends Resource
                     ->columns(2)
                     ->schema([
                         Forms\Components\Select::make('source_id')
-                            ->label('Manba')
+                            ->label(__('Manba'))
                             ->relationship('source', 'name')
                             ->searchable()
                             ->preload()
                             ->required(),
 
                         Forms\Components\Select::make('brand_id')
-                            ->label('Marka')
+                            ->label(__('Marka'))
                             ->relationship('brand', 'name')
                             ->searchable()
                             ->preload()
@@ -60,7 +63,7 @@ class ParserTargetResource extends Resource
                             ->afterStateUpdated(fn (Forms\Set $set) => $set('model_id', null)),
 
                         Forms\Components\Select::make('model_id')
-                            ->label('Model')
+                            ->label(__('Model'))
                             ->relationship(
                                 name: 'carModel',
                                 titleAttribute: 'name',
@@ -74,16 +77,16 @@ class ParserTargetResource extends Resource
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('target_url')
-                            ->label('Nishon URL')
-                            ->helperText('Parser aynan shu havoladan e\'lonlarni yig\'adi')
+                            ->label(__('Nishon URL'))
+                            ->helperText(__('Parser aynan shu havoladan e\'lonlarni yig\'adi'))
                             ->url()
                             ->required()
                             ->maxLength(700)
                             ->columnSpanFull(),
 
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Faol')
-                            ->helperText('O\'chirilsa, bu nishon navbatdagi yig\'ish tsikllarida o\'tkazib yuboriladi')
+                            ->label(__('Faol'))
+                            ->helperText(__('O\'chirilsa, bu nishon navbatdagi yig\'ish tsikllarida o\'tkazib yuboriladi'))
                             ->default(true),
                     ]),
 
@@ -91,15 +94,15 @@ class ParserTargetResource extends Resource
                     ->columns(3)
                     ->schema([
                         Forms\Components\DateTimePicker::make('last_run_at')
-                            ->label('Oxirgi ishga tushgan vaqt')
+                            ->label(__('Oxirgi ishga tushgan vaqt'))
                             ->disabled(),
 
                         Forms\Components\TextInput::make('last_status')
-                            ->label('Oxirgi holat')
+                            ->label(__('Oxirgi holat'))
                             ->disabled(),
 
                         Forms\Components\Textarea::make('last_error')
-                            ->label('Oxirgi xato')
+                            ->label(__('Oxirgi xato'))
                             ->disabled()
                             ->columnSpanFull(),
                     ])
@@ -113,30 +116,30 @@ class ParserTargetResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('source.name')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->badge()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('brand.name')
-                    ->label('Marka')
+                    ->label(__('Marka'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('carModel.name')
-                    ->label('Model')
+                    ->label(__('Model'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('target_url')
-                    ->label('Havola')
+                    ->label(__('Havola'))
                     ->url(fn (ParserTarget $record): string => $record->target_url)
                     ->openUrlInNewTab()
-                    ->formatStateUsing(fn () => 'Ko\'rish')
+                    ->formatStateUsing(fn () => __('Ko\'rish'))
                     ->color('primary'),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Faol')
+                    ->label(__('Faol'))
                     ->boolean()
                     ->action(
                         Tables\Actions\Action::make('toggle_active')
@@ -144,7 +147,7 @@ class ParserTargetResource extends Resource
                     ),
 
                 Tables\Columns\TextColumn::make('last_status')
-                    ->label('Oxirgi holat')
+                    ->label(__('Oxirgi holat'))
                     ->badge()
                     ->color(fn (?string $state): string => match ($state) {
                         'success' => 'success',
@@ -154,46 +157,46 @@ class ParserTargetResource extends Resource
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'success' => 'Muvaffaqiyatli',
-                        'partial' => 'Qisman (sahifa xatosi)',
-                        'error' => 'Xato',
-                        'blocked' => 'Bloklangan',
-                        default => 'Hali ishlamagan',
+                        'success' => __('Muvaffaqiyatli'),
+                        'partial' => __('Qisman (sahifa xatosi)'),
+                        'error' => __('Xato'),
+                        'blocked' => __('Bloklangan'),
+                        default => __('Hali ishlamagan'),
                     }),
 
                 Tables\Columns\TextColumn::make('last_run_at')
-                    ->label('Oxirgi ishga tushgan')
+                    ->label(__('Oxirgi ishga tushgan'))
                     ->dateTime('d.m.Y H:i')
                     ->since()
                     ->sortable()
-                    ->placeholder('—'),
+                    ->placeholder(__('—')),
             ])
             ->defaultSort('last_run_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('source_id')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->relationship('source', 'name'),
 
                 Tables\Filters\SelectFilter::make('brand_id')
-                    ->label('Marka')
+                    ->label(__('Marka'))
                     ->relationship('brand', 'name')
                     ->searchable(),
 
                 Tables\Filters\SelectFilter::make('last_status')
-                    ->label('Oxirgi holat')
+                    ->label(__('Oxirgi holat'))
                     ->options([
-                        'success' => 'Muvaffaqiyatli',
-                        'partial' => 'Qisman (sahifa xatosi)',
-                        'error' => 'Xato',
-                        'blocked' => 'Bloklangan',
+                        'success' => __('Muvaffaqiyatli'),
+                        'partial' => __('Qisman (sahifa xatosi)'),
+                        'error' => __('Xato'),
+                        'blocked' => __('Bloklangan'),
                     ]),
 
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Faol'),
+                    ->label(__('Faol')),
             ])
             ->actions([
                 Tables\Actions\Action::make('view_error')
-                    ->label('Xatoni ko\'rish')
+                    ->label(__('Xatoni ko\'rish'))
                     ->icon('heroicon-o-exclamation-triangle')
                     ->color('danger')
                     ->visible(fn (ParserTarget $record): bool => filled($record->last_error))
@@ -205,14 +208,14 @@ class ParserTargetResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('activate')
-                    ->label('Tanlanganlarni faollashtirish')
+                    ->label(__('Tanlanganlarni faollashtirish'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->action(fn (Collection $records) => $records->each->update(['is_active' => true]))
                     ->deselectRecordsAfterCompletion(),
 
                 Tables\Actions\BulkAction::make('deactivate')
-                    ->label('Tanlanganlarni o\'chirish')
+                    ->label(__('Tanlanganlarni o\'chirish'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
