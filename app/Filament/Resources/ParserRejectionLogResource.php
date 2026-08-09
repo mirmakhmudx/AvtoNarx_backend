@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\TranslatesLabels;
 use App\Filament\Resources\ParserRejectionLogResource\Pages;
 use App\Models\ParserRejectionLog;
 use Filament\Resources\Resource;
@@ -17,6 +18,8 @@ use Filament\Tables\Table;
  */
 class ParserRejectionLogResource extends Resource
 {
+    use TranslatesLabels;
+
     protected static ?string $model = ParserRejectionLog::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-trash';
@@ -57,18 +60,18 @@ class ParserRejectionLogResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('rejected_at')
-                    ->label('Rad etilgan vaqt')
+                    ->label(__('Rad etilgan vaqt'))
                     ->dateTime('d.m.Y H:i')
                     ->since()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('source.name')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->badge()
-                    ->placeholder('—'),
+                    ->placeholder(__('—')),
 
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Sabab kodi')
+                    ->label(__('Sabab kodi'))
                     ->badge()
                     ->color(fn (string $state): string => match (true) {
                         str_contains($state, 'olx_fallback_result') => 'warning',
@@ -78,44 +81,44 @@ class ParserRejectionLogResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('brand_raw')
-                    ->label('Marka / Model')
-                    ->formatStateUsing(fn (ParserRejectionLog $record): string => trim(($record->brand_raw ?? '—') . ' ' . ($record->model_raw ?? '')))
+                    ->label(__('Marka / Model'))
+                    ->formatStateUsing(fn (ParserRejectionLog $record): string => trim(($record->brand_raw ?? '—').' '.($record->model_raw ?? '')))
                     ->searchable(['brand_raw', 'model_raw']),
 
                 Tables\Columns\TextColumn::make('title_raw')
-                    ->label('Asl sarlavha (OLX)')
+                    ->label(__('Asl sarlavha (OLX)'))
                     ->searchable()
                     ->wrap()
                     ->limit(80)
-                    ->placeholder('—')
+                    ->placeholder(__('—'))
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('price_amount')
-                    ->label('Narx')
+                    ->label(__('Narx'))
                     ->formatStateUsing(fn (ParserRejectionLog $record): string => $record->price_amount !== null
-                        ? number_format($record->price_amount) . ' ' . $record->currency
+                        ? number_format($record->price_amount).' '.$record->currency
                         : '—'),
 
                 Tables\Columns\TextColumn::make('canonical_url')
-                    ->label('Havola')
+                    ->label(__('Havola'))
                     ->limit(50)
                     ->url(fn (ParserRejectionLog $record): ?string => $record->canonical_url)
                     ->openUrlInNewTab()
-                    ->placeholder('—'),
+                    ->placeholder(__('—')),
 
                 Tables\Columns\TextColumn::make('message')
-                    ->label('Izoh')
+                    ->label(__('Izoh'))
                     ->limit(60)
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('rejected_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('source_id')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->relationship('source', 'name'),
 
                 Tables\Filters\SelectFilter::make('code')
-                    ->label('Sabab kodi')
+                    ->label(__('Sabab kodi'))
                     ->options(fn () => ParserRejectionLog::query()
                         ->distinct()
                         ->orderBy('code')
@@ -124,7 +127,7 @@ class ParserRejectionLogResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
-                    ->label('Tanlanganlarni jurnaldan o\'chirish'),
+                    ->label(__('Tanlanganlarni jurnaldan o\'chirish')),
             ]);
     }
 

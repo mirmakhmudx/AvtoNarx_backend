@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->source = Source::create(array(
+    $this->source = Source::create([
         'code' => 'uzum_avto',
         'name' => 'Uzum Avto',
         'type' => 'manufacturer',
@@ -18,28 +18,28 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'official',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
-    $this->model = CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
+    $this->brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
+    $this->model = CarModel::create(['brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true]);
 });
 
-function makeExpiryTestOffer(array $overrides = array()): OfficialOffer
+function makeExpiryTestOffer(array $overrides = []): OfficialOffer
 {
-    return OfficialOffer::create(array_merge(array(
+    return OfficialOffer::create(array_merge([
         'source_id' => test()->source->id,
         'brand_id' => test()->brand->id,
         'model_id' => test()->model->id,
         'price_amount' => 145000000,
         'currency' => 'UZS',
         'publication_status' => 'published',
-    ), $overrides));
+    ], $overrides));
 }
 
 it('delegates to OfficialOfferService::expireOutdated and expires overdue published offers', function () {
-    $expired = makeExpiryTestOffer(array('trim_name' => 'Expired', 'valid_to' => now()->subDay()));
-    $stillValid = makeExpiryTestOffer(array('trim_name' => 'Valid', 'valid_to' => now()->addDay()));
+    $expired = makeExpiryTestOffer(['trim_name' => 'Expired', 'valid_to' => now()->subDay()]);
+    $stillValid = makeExpiryTestOffer(['trim_name' => 'Valid', 'valid_to' => now()->addDay()]);
 
     ExpireOfficialOffersJob::dispatchSync();
 
@@ -48,7 +48,7 @@ it('delegates to OfficialOfferService::expireOutdated and expires overdue publis
 });
 
 it('does not touch pending offers even if their valid_to has passed', function () {
-    $pendingOld = makeExpiryTestOffer(array('trim_name' => 'PendingOld', 'publication_status' => 'pending', 'valid_to' => now()->subDay()));
+    $pendingOld = makeExpiryTestOffer(['trim_name' => 'PendingOld', 'publication_status' => 'pending', 'valid_to' => now()->subDay()]);
 
     ExpireOfficialOffersJob::dispatchSync();
 

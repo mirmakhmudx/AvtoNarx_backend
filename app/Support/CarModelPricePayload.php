@@ -10,6 +10,5 @@ final class CarModelPricePayload
     public function __construct(
         public readonly ?OfficialOffer $officialOffer,
         public readonly ?MarketPriceStatistic $marketStatistic,
-    ) {
-    }
+    ) {}
 }

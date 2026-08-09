@@ -24,11 +24,11 @@ class CatalogListCandidatesCommand extends Command
         }
 
         if ($brand = $this->option('brand')) {
-            $query->where('brand_name_raw', 'ILIKE', '%' . $brand . '%');
+            $query->where('brand_name_raw', 'ILIKE', '%'.$brand.'%');
         }
 
         if ($model = $this->option('model')) {
-            $query->where('model_name_raw', 'ILIKE', '%' . $model . '%');
+            $query->where('model_name_raw', 'ILIKE', '%'.$model.'%');
         }
 
         $rows = $query->limit((int) $this->option('limit'))->get(['id', 'brand_name_raw', 'model_name_raw', 'status']);
@@ -44,8 +44,8 @@ class CatalogListCandidatesCommand extends Command
             $rows->map(fn ($r) => [$r->id, $r->brand_name_raw, $r->model_name_raw, $r->status])->all()
         );
 
-        $this->info('Jami: ' . $rows->count() . ' qator ko\'rsatildi.');
-        $this->comment('Promote qilish uchun: php artisan catalog:promote-candidates ' . $rows->pluck('id')->take(5)->implode(' ') . ' ...');
+        $this->info('Jami: '.$rows->count().' qator ko\'rsatildi.');
+        $this->comment('Promote qilish uchun: php artisan catalog:promote-candidates '.$rows->pluck('id')->take(5)->implode(' ').' ...');
 
         return self::SUCCESS;
     }

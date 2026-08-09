@@ -10,6 +10,4 @@ namespace App\Services\Parser\Exceptions;
  * Oddiy vaqtinchalik xatolar (404, timeout, tarmoq xatosi) bu bilan aralashtirilmaydi —
  * ular faqat o'sha bitta targetni rad etadi, qolganlar davom etadi.
  */
-class SourceBlockedException extends \RuntimeException
-{
-}
+class SourceBlockedException extends \RuntimeException {}

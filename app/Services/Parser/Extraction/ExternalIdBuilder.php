@@ -11,15 +11,15 @@ class ExternalIdBuilder
     public function build(string $canonicalUrl): string
     {
         if (preg_match('/-ID([A-Za-z0-9]+)\.html$/', $canonicalUrl, $matches)) {
-            return 'olx-' . $matches[1];
+            return 'olx-'.$matches[1];
         }
 
         $pathId = basename(parse_url($canonicalUrl, PHP_URL_PATH) ?? '');
 
         if ($pathId !== '') {
-            return 'olx-' . preg_replace('/\.\w+$/', '', $pathId);
+            return 'olx-'.preg_replace('/\.\w+$/', '', $pathId);
         }
 
-        return 'olx-' . hash('sha256', $canonicalUrl);
+        return 'olx-'.hash('sha256', $canonicalUrl);
     }
 }

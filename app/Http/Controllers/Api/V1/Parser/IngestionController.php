@@ -7,8 +7,12 @@ use App\Http\Requests\Ingestion\StoreMarketListingBatchRequest;
 use App\Http\Requests\Ingestion\StoreOfficialOfferBatchRequest;
 use App\Jobs\ProcessIngestionBatchJob;
 use App\Jobs\ProcessOfficialOfferBatchJob;
+use App\Models\Brand;
+use App\Models\CarModel;
 use App\Models\IngestionBatch;
+use App\Models\ParserClient;
 use App\Models\Source;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,15 +25,15 @@ class IngestionController extends Controller
         $client = $request->user();
 
         if (! $client || ! $client->is_active) {
-            return response()->json(array('message' => 'Parser client faol emas.'), 403);
+            return response()->json(['message' => 'Parser client faol emas.'], 403);
         }
 
         $idempotencyKey = $request->header('Idempotency-Key');
 
         if (! $idempotencyKey || ! Str::isUuid($idempotencyKey)) {
-            return response()->json(array(
+            return response()->json([
                 'message' => 'Idempotency-Key header majburiy va UUID formatida bo\'lishi kerak.',
-            ), 422);
+            ], 422);
         }
 
         $data = $request->validated();
@@ -37,13 +41,13 @@ class IngestionController extends Controller
         $source = Source::where('code', $data['source'])->first();
 
         if (! $source) {
-            return response()->json(array('message' => 'Manba topilmadi.'), 422);
+            return response()->json(['message' => 'Manba topilmadi.'], 422);
         }
 
         if (! $client->isAllowedSource($source->id)) {
-            return response()->json(array(
-                'message' => 'Bu parser client uchun source_id=' . $source->id . ' ruxsat etilmagan.',
-            ), 403);
+            return response()->json([
+                'message' => 'Bu parser client uchun source_id='.$source->id.' ruxsat etilmagan.',
+            ], 403);
         }
 
         $checksum = hash('sha256', json_encode($data['items']));
@@ -54,7 +58,7 @@ class IngestionController extends Controller
             return $resolution;
         }
 
-        $batch = IngestionBatch::create(array(
+        $batch = IngestionBatch::create([
             'id' => $data['batch_id'],
             'parser_client_id' => $client->id,
             'source_id' => $source->id,
@@ -69,29 +73,29 @@ class IngestionController extends Controller
             'items_accepted' => 0,
             'items_rejected' => 0,
             'payload_checksum' => $checksum,
-        ));
+        ]);
 
         ProcessIngestionBatchJob::dispatch($batch->id, $data['items']);
 
         $client->touchLastSeen();
 
-        Log::info('Ingestion batch qabul qilindi', array(
+        Log::info('Ingestion batch qabul qilindi', [
             'batch_id' => $batch->id,
             'source' => $data['source'],
             'items_total' => $batch->items_total,
-        ));
+        ]);
 
-        return response()->json(array(
-            'data' => array(
+        return response()->json([
+            'data' => [
                 'batch_id' => $batch->id,
                 'status' => 'received',
                 'items_total' => $batch->items_total,
-                'status_url' => '/api/v1/ingestion/batches/' . $batch->id,
-            ),
-            'meta' => array(
+                'status_url' => '/api/v1/ingestion/batches/'.$batch->id,
+            ],
+            'meta' => [
                 'request_id' => (string) Str::uuid(),
-            ),
-        ), 202);
+            ],
+        ], 202);
     }
 
     public function storeOfficialOffersBatch(StoreOfficialOfferBatchRequest $request): JsonResponse
@@ -99,15 +103,15 @@ class IngestionController extends Controller
         $client = $request->user();
 
         if (! $client || ! $client->is_active) {
-            return response()->json(array('message' => 'Parser client faol emas.'), 403);
+            return response()->json(['message' => 'Parser client faol emas.'], 403);
         }
 
         $idempotencyKey = $request->header('Idempotency-Key');
 
         if (! $idempotencyKey || ! Str::isUuid($idempotencyKey)) {
-            return response()->json(array(
+            return response()->json([
                 'message' => 'Idempotency-Key header majburiy va UUID formatida bo\'lishi kerak.',
-            ), 422);
+            ], 422);
         }
 
         $data = $request->validated();
@@ -115,24 +119,24 @@ class IngestionController extends Controller
         $source = Source::where('code', $data['source'])->first();
 
         if (! $source) {
-            return response()->json(array('message' => 'Manba topilmadi.'), 422);
+            return response()->json(['message' => 'Manba topilmadi.'], 422);
         }
 
         // TZ bo'lim 8.3: "Kirish faqat manufacturer yoki dealer turidagi
         // source uchun ruxsat etilgan." Marketplace (masalan OLX) rasmiy
         // taklif yubora olmaydi — bu faqat ikkilamchi bozor e'lonlari
         // manbasi.
-        if (! in_array($source->type, array('manufacturer', 'dealer'), true)) {
-            return response()->json(array(
+        if (! in_array($source->type, ['manufacturer', 'dealer'], true)) {
+            return response()->json([
                 'message' => "Manba turi ({$source->type}) rasmiy takliflar uchun ruxsat etilmagan — faqat manufacturer yoki dealer.",
                 'code' => 'source_not_allowed',
-            ), 403);
+            ], 403);
         }
 
         if (! $client->isAllowedSource($source->id)) {
-            return response()->json(array(
-                'message' => 'Bu parser client uchun source_id=' . $source->id . ' ruxsat etilmagan.',
-            ), 403);
+            return response()->json([
+                'message' => 'Bu parser client uchun source_id='.$source->id.' ruxsat etilmagan.',
+            ], 403);
         }
 
         $checksum = hash('sha256', json_encode($data['items']));
@@ -143,7 +147,7 @@ class IngestionController extends Controller
             return $resolution;
         }
 
-        $batch = IngestionBatch::create(array(
+        $batch = IngestionBatch::create([
             'id' => $data['batch_id'],
             'parser_client_id' => $client->id,
             'source_id' => $source->id,
@@ -158,29 +162,29 @@ class IngestionController extends Controller
             'items_accepted' => 0,
             'items_rejected' => 0,
             'payload_checksum' => $checksum,
-        ));
+        ]);
 
         ProcessOfficialOfferBatchJob::dispatch($batch->id, $data['items']);
 
         $client->touchLastSeen();
 
-        Log::info('Official offer batch qabul qilindi', array(
+        Log::info('Official offer batch qabul qilindi', [
             'batch_id' => $batch->id,
             'source' => $data['source'],
             'items_total' => $batch->items_total,
-        ));
+        ]);
 
-        return response()->json(array(
-            'data' => array(
+        return response()->json([
+            'data' => [
                 'batch_id' => $batch->id,
                 'status' => 'received',
                 'items_total' => $batch->items_total,
-                'status_url' => '/api/v1/ingestion/batches/' . $batch->id,
-            ),
-            'meta' => array(
+                'status_url' => '/api/v1/ingestion/batches/'.$batch->id,
+            ],
+            'meta' => [
                 'request_id' => (string) Str::uuid(),
-            ),
-        ), 202);
+            ],
+        ], 202);
     }
 
     /**
@@ -196,9 +200,9 @@ class IngestionController extends Controller
      * qayta yuborilganda hech narsa ushlanmay, DB PRIMARY KEY unique
      * cheklovida kutilmagan xatoga (500) olib keladi.
      *
-     * @return JsonResponse|null  JsonResponse — darhol qaytarilishi kerak bo'lgan
-     *                            javob (mos keldi yoki konflikt). null — bunday
-     *                            batch_id hali mavjud emas, yangisini yaratish mumkin.
+     * @return JsonResponse|null JsonResponse — darhol qaytarilishi kerak bo'lgan
+     *                           javob (mos keldi yoki konflikt). null — bunday
+     *                           batch_id hali mavjud emas, yangisini yaratish mumkin.
      */
     private function resolveExistingBatch(
         string $batchId,
@@ -215,37 +219,37 @@ class IngestionController extends Controller
         // "band qilib qo'yish" imkoniyatini bermaslik uchun ham konflikt
         // sifatida qaytariladi.
         if ($existingBatch->parser_client_id !== $clientId) {
-            return response()->json(array(
+            return response()->json([
                 'message' => 'Bu batch_id boshqa parser client tomonidan band qilingan.',
                 'code' => 'duplicate_batch_conflict',
-            ), 409);
+            ], 409);
         }
 
         // Bir xil client, bir xil batch_id, lekin checksum boshqacha —
         // ya'ni parser aynan shu batch_id ostida BOSHQA ma'lumot yubormoqchi.
         // TZ: bunday holat 409 bilan rad etiladi.
         if ($existingBatch->payload_checksum !== $checksum) {
-            return response()->json(array(
+            return response()->json([
                 'message' => 'Bu batch_id avval boshqa (mos kelmaydigan) tarkib bilan qabul qilingan.',
                 'code' => 'duplicate_batch_conflict',
-            ), 409);
+            ], 409);
         }
 
         // Checksum bir xil — bu haqiqiy replay (masalan parser javobni
         // ololmay qayta yuborgan). Avvalgi natijani qaytaramiz, qayta
         // ishlamaymiz va qayta navbatga qo'ymaymiz.
-        return response()->json(array(
-            'data' => array(
+        return response()->json([
+            'data' => [
                 'batch_id' => $existingBatch->id,
                 'status' => $existingBatch->status,
                 'items_total' => $existingBatch->items_total,
-                'status_url' => '/api/v1/ingestion/batches/' . $existingBatch->id,
-            ),
-            'meta' => array(
+                'status_url' => '/api/v1/ingestion/batches/'.$existingBatch->id,
+            ],
+            'meta' => [
                 'request_id' => (string) Str::uuid(),
                 'note' => 'Bu batch avval qabul qilingan (idempotent takror so\'rov).',
-            ),
-        ), 202);
+            ],
+        ], 202);
     }
 
     public function showBatch(string $batchId, Request $request): JsonResponse
@@ -253,7 +257,7 @@ class IngestionController extends Controller
         $batch = IngestionBatch::find($batchId);
 
         if ($batch === null) {
-            return response()->json(array('message' => 'Batch topilmadi.'), 404);
+            return response()->json(['message' => 'Batch topilmadi.'], 404);
         }
 
         $client = $request->user();
@@ -262,11 +266,11 @@ class IngestionController extends Controller
         // TZ bo'lim 14: administrator uchun "batch va xatolar"ni ko'rish —
         // moderatsiya funksiyasi, shuning uchun administrator har qanday
         // batch'ni ko'ra oladi.
-        $isOwner = $client instanceof \App\Models\ParserClient && $batch->parser_client_id === $client->id;
-        $isAdmin = $client instanceof \App\Models\User && $client->isAdministrator();
+        $isOwner = $client instanceof ParserClient && $batch->parser_client_id === $client->id;
+        $isAdmin = $client instanceof User && $client->isAdministrator();
 
         if (! $isOwner && ! $isAdmin) {
-            return response()->json(array('message' => 'Bu batch sizga tegishli emas.'), 403);
+            return response()->json(['message' => 'Bu batch sizga tegishli emas.'], 403);
         }
 
         $errors = $batch->itemErrors()
@@ -274,17 +278,17 @@ class IngestionController extends Controller
             ->limit(20)
             ->get()
             ->map(function ($error) {
-                return array(
+                return [
                     'item_index' => $error->item_index,
                     'external_id' => $error->external_id,
                     'code' => $error->code,
                     'field' => $error->field,
                     'message' => $error->message,
-                );
+                ];
             });
 
-        return response()->json(array(
-            'data' => array(
+        return response()->json([
+            'data' => [
                 'batch_id' => $batch->id,
                 'dataset' => $batch->dataset,
                 'status' => $batch->status,
@@ -293,8 +297,8 @@ class IngestionController extends Controller
                 'items_rejected' => $batch->items_rejected,
                 'errors' => $errors,
                 'completed_at' => $batch->completed_at?->toIso8601String(),
-            ),
-        ));
+            ],
+        ]);
     }
 
     public function batchErrors(string $batchId, Request $request): JsonResponse
@@ -302,16 +306,16 @@ class IngestionController extends Controller
         $batch = IngestionBatch::find($batchId);
 
         if ($batch === null) {
-            return response()->json(array('message' => 'Batch topilmadi.'), 404);
+            return response()->json(['message' => 'Batch topilmadi.'], 404);
         }
 
         $client = $request->user();
 
-        $isOwner = $client instanceof \App\Models\ParserClient && $batch->parser_client_id === $client->id;
-        $isAdmin = $client instanceof \App\Models\User && $client->isAdministrator();
+        $isOwner = $client instanceof ParserClient && $batch->parser_client_id === $client->id;
+        $isAdmin = $client instanceof User && $client->isAdministrator();
 
         if (! $isOwner && ! $isAdmin) {
-            return response()->json(array('message' => 'Bu batch sizga tegishli emas.'), 403);
+            return response()->json(['message' => 'Bu batch sizga tegishli emas.'], 403);
         }
 
         $errors = $batch->itemErrors()
@@ -326,24 +330,24 @@ class IngestionController extends Controller
         $client = $request->user();
 
         if (! $client) {
-            return response()->json(array('message' => 'Autentifikatsiya talab qilinadi.'), 401);
+            return response()->json(['message' => 'Autentifikatsiya talab qilinadi.'], 401);
         }
 
         // TZ 8.5: parser holatini qabul qilamiz (barcha maydonlar ixtiyoriy).
-        $validated = $request->validate(array(
-            'parser_version' => array('nullable', 'string', 'max:50'),
-            'hostname_hash' => array('nullable', 'string', 'max:64'),
-            'queue_size' => array('nullable', 'integer', 'min:0'),
-            'last_run_at' => array('nullable', 'date'),
-        ));
+        $validated = $request->validate([
+            'parser_version' => ['nullable', 'string', 'max:50'],
+            'hostname_hash' => ['nullable', 'string', 'max:64'],
+            'queue_size' => ['nullable', 'integer', 'min:0'],
+            'last_run_at' => ['nullable', 'date'],
+        ]);
 
         $updates = array_filter(
-            array(
+            [
                 'parser_version' => $validated['parser_version'] ?? null,
                 'hostname_hash' => $validated['hostname_hash'] ?? null,
                 'queue_size' => $validated['queue_size'] ?? null,
                 'last_run_at' => $validated['last_run_at'] ?? null,
-            ),
+            ],
             fn ($value) => $value !== null,
         );
 
@@ -352,17 +356,17 @@ class IngestionController extends Controller
 
         $client->forceFill($updates)->save();
 
-        return response()->json(array('message' => 'ok', 'server_time' => now()->toIso8601String()));
+        return response()->json(['message' => 'ok', 'server_time' => now()->toIso8601String()]);
     }
 
     public function catalog(): JsonResponse
     {
-        return response()->json(array(
-            'data' => array(
-                'brands' => \App\Models\Brand::query()->active()->get(array('id', 'name', 'slug')),
-                'models' => \App\Models\CarModel::query()->active()->get(array('id', 'brand_id', 'name', 'slug')),
+        return response()->json([
+            'data' => [
+                'brands' => Brand::query()->active()->get(['id', 'name', 'slug']),
+                'models' => CarModel::query()->active()->get(['id', 'brand_id', 'name', 'slug']),
                 'catalog_version' => now()->toIso8601String(),
-            ),
-        ));
+            ],
+        ]);
     }
 }

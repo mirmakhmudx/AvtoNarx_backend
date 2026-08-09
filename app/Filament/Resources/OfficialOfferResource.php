@@ -3,18 +3,24 @@
 namespace App\Filament\Resources;
 
 use App\Enums\OfferStatus;
+use App\Filament\Concerns\TranslatesLabels;
 use App\Filament\Resources\OfficialOfferResource\Pages;
+use App\Models\Brand;
+use App\Models\CarModel;
 use App\Models\OfficialOffer;
 use App\Services\OfficialOffers\OfficialOfferService;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class OfficialOfferResource extends Resource
 {
+    use TranslatesLabels;
+
     protected static ?string $model = OfficialOffer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
@@ -47,53 +53,54 @@ class OfficialOfferResource extends Resource
                     ->columns(2)
                     ->schema([
                         Forms\Components\Select::make('source_id')
-                            ->label('Manba')
+                            ->label(__('Manba'))
                             ->relationship('source', 'name')
                             ->searchable()
                             ->preload()
                             ->required(),
 
                         Forms\Components\TextInput::make('source_url')
-                            ->label('Manba havolasi')
+                            ->label(__('Manba havolasi'))
                             ->url()
                             ->required()
                             ->maxLength(1000),
 
                         Forms\Components\Select::make('brand_id')
-                            ->label('Marka')
-                            ->relationship('brand', 'name')
+                            ->label(__('Marka'))
+                            ->options(fn () => Brand::orderBy('name')->pluck('name', 'id'))
                             ->searchable()
-                            ->preload()
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn (Forms\Set $set) => $set('model_id', null)),
 
                         Forms\Components\Select::make('model_id')
-                            ->label('Model')
-                            ->relationship(
-                                name: 'carModel',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn (Builder $query, Forms\Get $get) => $get('brand_id')
-                                    ? $query->where('brand_id', $get('brand_id'))
-                                    : $query,
-                            )
+                            ->label(__('Model'))
+                            ->options(fn (Forms\Get $get) => $get('brand_id')
+                                ? CarModel::query()
+                                    ->where('brand_id', $get('brand_id'))
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                : CarModel::query()->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
-                            ->preload()
                             ->required(),
 
                         Forms\Components\TextInput::make('trim_name')
-                            ->label('Komplektatsiya')
+                            ->label(__('Komplektatsiya'))
                             ->maxLength(120),
 
-                        Forms\Components\TextInput::make('year')
-                            ->label('Yil')
-                            ->numeric()
-                            ->minValue(1950)
-                            ->maxValue((int) date('Y') + 1),
+                        Forms\Components\Select::make('year')
+                            ->label(__('Yil'))
+                            ->options(function (): array {
+                                $years = range((int) date('Y') + 1, 1950);
+
+                                return array_combine($years, $years);
+                            })
+                            ->searchable()
+                            ->native(false),
 
                         Forms\Components\TextInput::make('external_id')
-                            ->label('Tashqi ID')
-                            ->helperText('Ixtiyoriy — manbadagi ichki identifikator')
+                            ->label(__('Tashqi ID'))
+                            ->helperText(__('Ixtiyoriy — manbadagi ichki identifikator'))
                             ->maxLength(255),
                     ]),
 
@@ -101,13 +108,13 @@ class OfficialOfferResource extends Resource
                     ->columns(2)
                     ->schema([
                         Forms\Components\TextInput::make('price_amount')
-                            ->label('Narx')
+                            ->label(__('Narx'))
                             ->numeric()
                             ->required()
                             ->minValue(1),
 
                         Forms\Components\Select::make('currency')
-                            ->label('Valyuta')
+                            ->label(__('Valyuta'))
                             ->options([
                                 'UZS' => 'UZS',
                                 'USD' => 'USD',
@@ -120,22 +127,22 @@ class OfficialOfferResource extends Resource
                     ->columns(2)
                     ->schema([
                         Forms\Components\DateTimePicker::make('valid_from')
-                            ->label('Boshlanish sanasi'),
+                            ->label(__('Boshlanish sanasi')),
 
                         Forms\Components\DateTimePicker::make('valid_to')
-                            ->label('Tugash sanasi')
-                            ->helperText('Muddatsiz bo\'lsa — bo\'sh qoldiring'),
+                            ->label(__('Tugash sanasi'))
+                            ->helperText(__('Muddatsiz bo\'lsa — bo\'sh qoldiring')),
                     ]),
 
                 Forms\Components\Section::make('Moderatsiya (avtomatik to\'ldiriladi)')
                     ->columns(2)
                     ->schema([
                         Forms\Components\TextInput::make('publication_status')
-                            ->label('Holat')
+                            ->label(__('Holat'))
                             ->disabled(),
 
                         Forms\Components\DateTimePicker::make('published_at')
-                            ->label('Nashr qilingan vaqt')
+                            ->label(__('Nashr qilingan vaqt'))
                             ->disabled(),
                     ])
                     ->hiddenOn('create')
@@ -148,28 +155,28 @@ class OfficialOfferResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('brand.name')
-                    ->label('Marka / Model')
+                    ->label(__('Marka / Model'))
                     ->formatStateUsing(fn (OfficialOffer $record): string => trim($record->brand->name.' '.$record->carModel->name.' '.($record->trim_name ?? '')))
                     ->searchable(['trim_name'])
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('year')
-                    ->label('Yil')
-                    ->placeholder('—')
+                    ->label(__('Yil'))
+                    ->placeholder(__('—'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('price_amount')
-                    ->label('Narx')
+                    ->label(__('Narx'))
                     ->formatStateUsing(fn (OfficialOffer $record): string => number_format($record->price_amount).' '.$record->currency->value
                         .($record->currency->value !== 'UZS' && $record->price_uzs ? ' ('.number_format($record->price_uzs).' UZS)' : ''))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('source.name')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('publication_status')
-                    ->label('Holat')
+                    ->label(__('Holat'))
                     ->badge()
                     ->color(fn (OfferStatus $state): string => match ($state) {
                         OfferStatus::Pending => 'warning',
@@ -178,20 +185,20 @@ class OfficialOfferResource extends Resource
                         OfferStatus::Expired => 'gray',
                     })
                     ->formatStateUsing(fn (OfferStatus $state): string => match ($state) {
-                        OfferStatus::Pending => 'Kutmoqda',
-                        OfferStatus::Published => 'Nashr qilingan',
-                        OfferStatus::Rejected => 'Rad etilgan',
-                        OfferStatus::Expired => 'Muddati tugagan',
+                        OfferStatus::Pending => __('Kutmoqda'),
+                        OfferStatus::Published => __('Nashr qilingan'),
+                        OfferStatus::Rejected => __('Rad etilgan'),
+                        OfferStatus::Expired => __('Muddati tugagan'),
                     }),
 
                 Tables\Columns\TextColumn::make('valid_to')
-                    ->label('Amal qilish muddati')
+                    ->label(__('Amal qilish muddati'))
                     ->dateTime('d.m.Y')
-                    ->placeholder('Muddatsiz')
-                    ->color(fn (?\Carbon\Carbon $state) => $state && $state->isPast() ? 'danger' : null),
+                    ->placeholder(__('Muddatsiz'))
+                    ->color(fn (?Carbon $state) => $state && $state->isPast() ? 'danger' : null),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Qo\'shilgan')
+                    ->label(__('Qo\'shilgan'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -199,27 +206,27 @@ class OfficialOfferResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('publication_status')
-                    ->label('Holat')
+                    ->label(__('Holat'))
                     ->options([
-                        'pending' => 'Kutmoqda',
-                        'published' => 'Nashr qilingan',
-                        'rejected' => 'Rad etilgan',
-                        'expired' => 'Muddati tugagan',
+                        'pending' => __('Kutmoqda'),
+                        'published' => __('Nashr qilingan'),
+                        'rejected' => __('Rad etilgan'),
+                        'expired' => __('Muddati tugagan'),
                     ])
                     ->default('pending'),
 
                 Tables\Filters\SelectFilter::make('source_id')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->relationship('source', 'name'),
 
                 Tables\Filters\SelectFilter::make('brand_id')
-                    ->label('Marka')
+                    ->label(__('Marka'))
                     ->relationship('brand', 'name')
                     ->searchable(),
             ])
             ->actions([
                 Tables\Actions\Action::make('publish')
-                    ->label('Nashr qilish')
+                    ->label(__('Nashr qilish'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
@@ -227,7 +234,7 @@ class OfficialOfferResource extends Resource
                     ->action(fn (OfficialOffer $record) => app(OfficialOfferService::class)->publish($record, auth()->id())),
 
                 Tables\Actions\Action::make('reject')
-                    ->label('Rad etish')
+                    ->label(__('Rad etish'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -238,11 +245,11 @@ class OfficialOfferResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('bulk_publish')
-                    ->label('Tanlanganlarni nashr qilish')
+                    ->label(__('Tanlanganlarni nashr qilish'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->action(function (\Illuminate\Support\Collection $records): void {
+                    ->action(function (Collection $records): void {
                         $service = app(OfficialOfferService::class);
                         $records->each(fn (OfficialOffer $offer) => $service->publish($offer, auth()->id()));
                     })

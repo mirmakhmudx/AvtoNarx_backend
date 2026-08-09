@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ParserTarget extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'source_id',
         'brand_id',
         'model_id',
@@ -16,12 +16,12 @@ class ParserTarget extends Model
         'last_run_at',
         'last_status',
         'last_error',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'is_active' => 'boolean',
         'last_run_at' => 'datetime',
-    );
+    ];
 
     public function source(): BelongsTo
     {

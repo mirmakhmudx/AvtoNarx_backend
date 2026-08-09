@@ -42,7 +42,7 @@ class ParserRunCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info('Fixture o\'qilyapti: ' . $inputPath);
+        $this->info('Fixture o\'qilyapti: '.$inputPath);
 
         $results = $this->offlineHtmlAdapter->extractFromFile($inputPath);
 
@@ -52,7 +52,7 @@ class ParserRunCommand extends Command
         foreach ($results as $result) {
             if ($result['item'] === null) {
                 $rejected++;
-                $this->warn('  RAD ETILDI: ' . $result['rejected_reason']);
+                $this->warn('  RAD ETILDI: '.$result['rejected_reason']);
 
                 continue;
             }
@@ -71,7 +71,7 @@ class ParserRunCommand extends Command
             ));
 
             if (! $dryRun) {
-                $dto = ListingData::fromArray(array(
+                $dto = ListingData::fromArray([
                     'source_id' => 1,
                     'external_id' => $item['external_id'],
                     'canonical_url' => $item['canonical_url'],
@@ -83,7 +83,7 @@ class ParserRunCommand extends Command
                     'condition' => $item['condition'],
                     'seller_type' => $item['seller_type'],
                     'region' => $item['region'],
-                ));
+                ]);
 
                 $this->ingestionService->ingest($dto);
             }

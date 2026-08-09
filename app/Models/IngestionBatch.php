@@ -9,9 +9,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class IngestionBatch extends Model
 {
     public $incrementing = false;
+
     protected $keyType = 'string';
 
-    protected $fillable = array(
+    protected $fillable = [
         'id',
         'parser_client_id',
         'source_id',
@@ -28,9 +29,9 @@ class IngestionBatch extends Model
         'payload_checksum',
         'error_summary',
         'completed_at',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'collected_at' => 'datetime',
         'received_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -38,7 +39,7 @@ class IngestionBatch extends Model
         'items_total' => 'integer',
         'items_accepted' => 'integer',
         'items_rejected' => 'integer',
-    );
+    ];
 
     public function parserClient(): BelongsTo
     {

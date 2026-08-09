@@ -23,7 +23,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('parser_clients', function (Blueprint $table) {
-            $table->dropColumn(array('hostname_hash', 'queue_size', 'last_run_at', 'last_heartbeat_at'));
+            $table->dropColumn(['hostname_hash', 'queue_size', 'last_run_at', 'last_heartbeat_at']);
         });
     }
 };

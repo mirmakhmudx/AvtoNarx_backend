@@ -18,8 +18,7 @@ final class OfficialOfferData
         public readonly ?\DateTimeImmutable $validFrom,
         public readonly ?\DateTimeImmutable $validTo,
         public readonly string $contentHash,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

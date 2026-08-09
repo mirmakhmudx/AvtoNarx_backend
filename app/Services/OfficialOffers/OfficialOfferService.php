@@ -10,8 +10,7 @@ class OfficialOfferService
 {
     public function __construct(
         private readonly ExchangeRateService $exchangeRateService,
-    ) {
-    }
+    ) {}
 
     public function create(array $data): OfficialOffer
     {
@@ -27,19 +26,19 @@ class OfficialOfferService
 
     public function publish(OfficialOffer $offer, ?int $verifiedBy = null): OfficialOffer
     {
-        $offer->update(array(
+        $offer->update([
             'publication_status' => 'published',
             'published_at' => now(),
             'verified_at' => now(),
             'verified_by' => $verifiedBy,
-        ));
+        ]);
 
         return $offer->refresh();
     }
 
     public function reject(OfficialOffer $offer): OfficialOffer
     {
-        $offer->update(array('publication_status' => 'rejected'));
+        $offer->update(['publication_status' => 'rejected']);
 
         return $offer;
     }
@@ -50,7 +49,7 @@ class OfficialOfferService
             ->where('publication_status', 'published')
             ->whereNotNull('valid_to')
             ->where('valid_to', '<', now())
-            ->update(array('publication_status' => 'expired'));
+            ->update(['publication_status' => 'expired']);
 
         return $expired;
     }
@@ -72,7 +71,7 @@ class OfficialOfferService
     {
         return OfficialOffer::query()
             ->where('publication_status', 'pending')
-            ->with(array('brand', 'carModel'))
+            ->with(['brand', 'carModel'])
             ->orderBy('created_at')
             ->get();
     }

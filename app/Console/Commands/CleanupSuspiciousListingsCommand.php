@@ -36,10 +36,10 @@ class CleanupSuspiciousListingsCommand extends Command
 
         $totalChecked = 0;
         $totalSuspicious = 0;
-        $idsToDelete = array();
+        $idsToDelete = [];
 
         MarketListing::query()
-            ->select(array('id', 'source_id', 'external_id', 'canonical_url', 'brand_raw', 'model_raw', 'price_amount', 'currency', 'price_uzs'))
+            ->select(['id', 'source_id', 'external_id', 'canonical_url', 'brand_raw', 'model_raw', 'price_amount', 'currency', 'price_uzs'])
             ->orderBy('id')
             ->chunkById($chunkSize, function ($listings) use ($checker, &$totalChecked, &$totalSuspicious, &$idsToDelete, $dryRun) {
                 foreach ($listings as $listing) {
@@ -57,7 +57,7 @@ class CleanupSuspiciousListingsCommand extends Command
                     $this->line("{$prefix}#{$listing->id} [{$reason['code']}] {$listing->brand_raw} {$listing->model_raw} — {$listing->price_amount} {$listing->currency->value} — {$listing->canonical_url}");
 
                     if (! $dryRun) {
-                        ParserRejectionLog::create(array(
+                        ParserRejectionLog::create([
                             'source_id' => $listing->source_id,
                             'external_id' => $listing->external_id,
                             'canonical_url' => $listing->canonical_url,
@@ -65,10 +65,10 @@ class CleanupSuspiciousListingsCommand extends Command
                             'model_raw' => $listing->model_raw,
                             'price_amount' => $listing->price_amount,
                             'currency' => $listing->currency->value,
-                            'code' => 'retroactive_cleanup:' . $reason['code'],
+                            'code' => 'retroactive_cleanup:'.$reason['code'],
                             'message' => $reason['message'],
                             'rejected_at' => now(),
-                        ));
+                        ]);
 
                         $idsToDelete[] = $listing->id;
                     }
@@ -82,7 +82,7 @@ class CleanupSuspiciousListingsCommand extends Command
         }
 
         $this->newLine();
-        $this->info("Jami tekshirildi: {$totalChecked}, shubhali topildi: {$totalSuspicious}" . ($dryRun ? ' (DRY-RUN, hech narsa o\'chirilmadi)' : ', o\'chirildi va jurnalga yozildi'));
+        $this->info("Jami tekshirildi: {$totalChecked}, shubhali topildi: {$totalSuspicious}".($dryRun ? ' (DRY-RUN, hech narsa o\'chirilmadi)' : ', o\'chirildi va jurnalga yozildi'));
 
         return self::SUCCESS;
     }

@@ -7,14 +7,14 @@ class MedianCalculator
     public function calculate(array $prices): array
     {
         sort($prices);
-        $total = sizeof($prices);
+        $total = count($prices);
 
         $sum = 0;
         foreach ($prices as $p) {
             $sum = $sum + $p;
         }
 
-        $result = array();
+        $result = [];
         $result['median'] = $this->percentile($prices, 50);
         $result['mean'] = (int) round($sum / $total);
         $result['min'] = $prices[0];
@@ -39,14 +39,14 @@ class MedianCalculator
     public function filterOutliers(array $prices, int $globalMinPrice, int $globalMaxPrice, int $iqrMinSampleSize): array
     {
         // 1-2 bosqich: global chegaralar (shu bilan nol va "to'liqsiz" narxlar ham chiqadi).
-        $bounded = array();
+        $bounded = [];
         foreach ($prices as $price) {
             if ($price >= $globalMinPrice && $price <= $globalMaxPrice) {
                 $bounded[] = $price;
             }
         }
 
-        $total = sizeof($bounded);
+        $total = count($bounded);
 
         // 4-bosqich: tanlanma IQR uchun yetarli emas — global chegaralar bilan cheklanamiz.
         if ($total < $iqrMinSampleSize) {
@@ -63,7 +63,7 @@ class MedianCalculator
         $lowerBound = $q1 - (1.5 * $iqr);
         $upperBound = $q3 + (1.5 * $iqr);
 
-        $filtered = array();
+        $filtered = [];
         foreach ($bounded as $price) {
             if ($price >= $lowerBound && $price <= $upperBound) {
                 $filtered[] = $price;
@@ -75,7 +75,7 @@ class MedianCalculator
 
     private function percentile(array $sortedPrices, int $percentile): int
     {
-        $total = sizeof($sortedPrices);
+        $total = count($sortedPrices);
 
         if ($total === 1) {
             return $sortedPrices[0];

@@ -3,7 +3,7 @@
 use App\Services\Parser\Extraction\TitleModelMatcher;
 
 beforeEach(function () {
-    $this->matcher = new TitleModelMatcher();
+    $this->matcher = new TitleModelMatcher;
 });
 
 it('accepts genuine matches including cyrillic and misspellings', function (string $title, string $model) {

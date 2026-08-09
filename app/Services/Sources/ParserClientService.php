@@ -8,22 +8,22 @@ class ParserClientService
 {
     public function createWithToken(string $name, array $allowedSourceIds)
     {
-        $client = ParserClient::create(array(
+        $client = ParserClient::create([
             'name' => $name,
             'is_active' => true,
-            'allowed_source_ids' => $allowedSourceIds
-        ));
+            'allowed_source_ids' => $allowedSourceIds,
+        ]);
         $token = $client->createToken('parser-client-token')->plainTextToken;
 
-        return array(
+        return [
             'client' => $client,
-            'token' => $token
-        );
+            'token' => $token,
+        ];
     }
 
     public function revoke(ParserClient $client)
     {
         $client->tokens()->delete();
-        $client->update(array('is_active' => false));
+        $client->update(['is_active' => false]);
     }
 }

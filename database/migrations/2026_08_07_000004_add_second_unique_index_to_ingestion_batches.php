@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ingestion_batches', function (Blueprint $table) {
-            $table->unique(array('parser_client_id', 'id'), 'ingestion_batches_client_id_unique');
+            $table->unique(['parser_client_id', 'id'], 'ingestion_batches_client_id_unique');
         });
     }
 

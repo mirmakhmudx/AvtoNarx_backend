@@ -7,17 +7,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DiscoveredBrand extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'source_id',
         'name',
         'slug',
         'discovered_url',
         'last_models_checked_at',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'last_models_checked_at' => 'datetime',
-    );
+    ];
 
     public function source(): BelongsTo
     {

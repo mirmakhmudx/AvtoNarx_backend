@@ -32,6 +32,7 @@ class ExpireStaleListingsJob implements ShouldQueue
     private const STALE_AFTER_HOURS = 72;
 
     public int $tries = 1;
+
     public int $timeout = 300;
 
     public function handle(): void
@@ -41,7 +42,7 @@ class ExpireStaleListingsJob implements ShouldQueue
         $count = MarketListing::query()
             ->where('status', ListingStatus::Active->value)
             ->where('last_seen_at', '<', $threshold)
-            ->update(array('status' => ListingStatus::Inactive->value));
+            ->update(['status' => ListingStatus::Inactive->value]);
 
         Log::info("ExpireStaleListingsJob tugadi: {$count} ta e'lon inactive qilindi (last_seen_at < {$threshold->toIso8601String()}).");
     }

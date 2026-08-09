@@ -15,8 +15,8 @@ class RecalculateStatisticsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-
     public int $tries = 1;
+
     public int $timeout = 600;
 
     public function __construct()
@@ -26,11 +26,11 @@ class RecalculateStatisticsJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return array(
+        return [
             (new WithoutOverlapping('recalculate-market-statistics'))
                 ->expireAfter(700)
                 ->dontRelease(),
-        );
+        ];
     }
 
     public function handle(MarketStatisticsService $statisticsService): void

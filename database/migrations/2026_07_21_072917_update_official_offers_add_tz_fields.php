@@ -27,7 +27,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('official_offers', function (Blueprint $table) {
-            $table->dropColumn(array('source_url', 'valid_to', 'observed_at', 'verified_at', 'verified_by', 'content_hash'));
+            $table->dropColumn(['source_url', 'valid_to', 'observed_at', 'verified_at', 'verified_by', 'content_hash']);
         });
 
         Schema::table('official_offers', function (Blueprint $table) {

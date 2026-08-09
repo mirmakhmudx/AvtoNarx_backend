@@ -14,15 +14,14 @@ class BrandController extends Controller
     public function __construct(
         private readonly BrandService $brandService,
         private readonly ApiCacheService $apiCache,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
         return $this->apiCache->respond('public:v1:brands:index', $request, function () {
-            return array(
+            return [
                 'data' => BrandResource::collection($this->brandService->listActive())->resolve(request()),
-            );
+            ];
         });
     }
 
@@ -30,10 +29,10 @@ class BrandController extends Controller
     {
         $brand = $this->brandService->findBySlug($slug);
 
-        return $this->apiCache->respond('public:v1:brands:show:' . $slug, $request, function () use ($brand) {
-            return array(
+        return $this->apiCache->respond('public:v1:brands:show:'.$slug, $request, function () use ($brand) {
+            return [
                 'data' => BrandResource::make($brand)->resolve(request()),
-            );
+            ];
         });
     }
 }

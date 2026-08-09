@@ -2,15 +2,20 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Concerns\TranslatesWidgetLabels;
 use App\Models\MarketListing;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
 class ListingsOverTimeChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Oxirgi 14 kunlik e\'lonlar dinamikasi';
+    use TranslatesWidgetLabels;
 
-    protected static ?int $sort = 0;
+    protected static ?string $heading = 'E\'lonlar dinamikasi';
+
+    protected static ?string $description = 'Oxirgi 14 kun';
+
+    protected static ?int $sort = 2;
 
     protected int|string|array $columnSpan = 1;
 
@@ -24,25 +29,40 @@ class ListingsOverTimeChartWidget extends ChartWidget
             ->groupBy('d')
             ->pluck('total', 'd');
 
-        $data = $days->map(fn (Carbon $day) => $counts->get($day->toDateString(), 0));
+        $data = $days->map(fn (Carbon $day) => (int) $counts->get($day->toDateString(), 0));
 
-        return array(
-            'datasets' => array(
-                array(
-                    'label' => 'Yangi e\'lonlar',
+        return [
+            'datasets' => [
+                [
+                    'label' => __('Yangi e\'lonlar'),
                     'data' => $data->values()->all(),
-                    'borderColor' => '#10b981',
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.15)',
+                    'borderColor' => '#6366f1',
+                    'backgroundColor' => 'rgba(99, 102, 241, 0.15)',
                     'fill' => true,
-                    'tension' => 0.3,
-                ),
-            ),
+                    'tension' => 0.4,
+                    'pointRadius' => 0,
+                    'pointHoverRadius' => 5,
+                    'pointBackgroundColor' => '#6366f1',
+                    'borderWidth' => 3,
+                ],
+            ],
             'labels' => $days->map(fn (Carbon $day) => $day->format('d.m'))->all(),
-        );
+        ];
     }
 
     protected function getType(): string
     {
         return 'line';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            'plugins' => ['legend' => ['display' => false]],
+            'scales' => [
+                'y' => ['beginAtZero' => true, 'grid' => ['color' => 'rgba(148,163,184,0.12)']],
+                'x' => ['grid' => ['display' => false]],
+            ],
+        ];
     }
 }

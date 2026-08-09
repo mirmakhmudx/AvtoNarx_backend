@@ -8,10 +8,19 @@ class Dashboard extends BaseDashboard
 {
     protected static ?string $title = 'Boshqaruv paneli';
 
+    public function getTitle(): string
+    {
+        return __('Boshqaruv paneli');
+    }
+
     protected static ?string $navigationLabel = 'Dashboard';
 
     public function getColumns(): int|array
     {
-        return 2;
+        return [
+            'default' => 1,
+            'md' => 2,
+            'xl' => 3,
+        ];
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AuditLog extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'user_id',
         'action',
         'auditable_type',
@@ -17,12 +17,12 @@ class AuditLog extends Model
         'new_values',
         'ip_address',
         'user_agent',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'old_values' => 'array',
         'new_values' => 'array',
-    );
+    ];
 
     public function user(): BelongsTo
     {

@@ -23,8 +23,7 @@ class ListingIngestionService
         private readonly CatalogAliasService $aliasService,
         private readonly ExchangeRateService $exchangeRateService,
         private readonly ListingSanityChecker $sanityChecker,
-    ) {
-    }
+    ) {}
 
     public function ingest(ListingData $data): MarketListing
     {
@@ -70,7 +69,7 @@ class ListingIngestionService
             throw new SuspiciousListingRejectedException($suspiciousReason['code'], $suspiciousReason['message']);
         }
 
-        $attributes = array(
+        $attributes = [
             'canonical_url' => $data->canonicalUrl,
             'brand_raw' => $data->brandRaw,
             'model_raw' => $data->modelRaw,
@@ -89,18 +88,18 @@ class ListingIngestionService
             'content_hash' => $contentHash,
             'source_published_at' => $data->sourcePublishedAt,
             'last_seen_at' => now(),
-        );
+        ];
 
         // TZ: e'lon yozuvi va uning snapshot'i bitta tranzaksiyada — biri
         // saqlanib, ikkinchisi yiqilib qolmasligi uchun (mustahkamlik).
         return DB::transaction(function () use ($listing, $attributes, $contentHash, $data) {
             if ($listing === null) {
-                $listing = MarketListing::create(array_merge($attributes, array(
+                $listing = MarketListing::create(array_merge($attributes, [
                     'source_id' => $data->sourceId,
                     'external_id' => $data->externalId,
                     'first_seen_at' => now(),
                     'missing_runs' => 0,
-                )));
+                ]));
 
                 $this->recordSnapshot($listing, $contentHash);
 
@@ -108,12 +107,12 @@ class ListingIngestionService
             }
 
             if ($listing->content_hash === $contentHash) {
-                $listing->update(array('last_seen_at' => now(), 'missing_runs' => 0, 'status' => 'active'));
+                $listing->update(['last_seen_at' => now(), 'missing_runs' => 0, 'status' => 'active']);
 
                 return $listing;
             }
 
-            $listing->update(array_merge($attributes, array('missing_runs' => 0)));
+            $listing->update(array_merge($attributes, ['missing_runs' => 0]));
             $this->recordSnapshot($listing, $contentHash);
 
             return $listing->refresh();
@@ -141,22 +140,22 @@ class ListingIngestionService
         foreach ($missingListings as $listing) {
             $newMissingRuns = $listing->missing_runs + 1;
 
-            $listing->update(array(
+            $listing->update([
                 'missing_runs' => $newMissingRuns,
                 'status' => $newMissingRuns >= self::MAX_MISSING_RUNS ? 'inactive' : $listing->status,
-            ));
+            ]);
         }
     }
 
     private function recordSnapshot(MarketListing $listing, string $contentHash): void
     {
-        ListingPriceSnapshot::create(array(
+        ListingPriceSnapshot::create([
             'market_listing_id' => $listing->id,
             'price_amount' => $listing->price_amount,
             'currency' => $listing->currency,
             'price_uzs' => $listing->price_uzs,
             'observed_at' => now(),
             'content_hash' => $contentHash,
-        ));
+        ]);
     }
 }

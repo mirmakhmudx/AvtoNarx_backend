@@ -14,7 +14,7 @@ use Laravel\Sanctum\Sanctum;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->marketplaceSource = Source::create(array(
+    $this->marketplaceSource = Source::create([
         'code' => 'olx_uz',
         'name' => 'OLX.uz',
         'type' => 'marketplace',
@@ -22,10 +22,10 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'unverified',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->manufacturerSource = Source::create(array(
+    $this->manufacturerSource = Source::create([
         'code' => 'uzum_avto',
         'name' => 'Uzum Avto',
         'type' => 'manufacturer',
@@ -33,17 +33,17 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'official',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
-    $this->model = CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
+    $this->brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
+    $this->model = CarModel::create(['brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true]);
 
-    $this->client = ParserClient::create(array(
+    $this->client = ParserClient::create([
         'name' => 'Test parser',
         'is_active' => true,
-        'allowed_source_ids' => array($this->marketplaceSource->id, $this->manufacturerSource->id),
-    ));
+        'allowed_source_ids' => [$this->marketplaceSource->id, $this->manufacturerSource->id],
+    ]);
 });
 
 function actingAsParserClient(): void
@@ -51,61 +51,61 @@ function actingAsParserClient(): void
     Sanctum::actingAs(test()->client, ['*']);
 }
 
-function validListingItem(array $overrides = array()): array
+function validListingItem(array $overrides = []): array
 {
-    return array_merge(array(
-        'external_id' => 'olx-' . Str::random(8),
+    return array_merge([
+        'external_id' => 'olx-'.Str::random(8),
         'url' => 'https://www.olx.uz/d/obyavlenie/test.html',
         'brand' => 'Chevrolet',
         'model' => 'Cobalt',
         'year' => 2021,
-        'price' => array('amount' => 145000000, 'currency' => 'UZS'),
+        'price' => ['amount' => 145000000, 'currency' => 'UZS'],
         'observed_at' => now()->toIso8601String(),
-        'content_hash' => hash('sha256', 'listing-' . Str::random(8)),
-    ), $overrides);
+        'content_hash' => hash('sha256', 'listing-'.Str::random(8)),
+    ], $overrides);
 }
 
-function validListingBatchPayload(array $overrides = array()): array
+function validListingBatchPayload(array $overrides = []): array
 {
-    return array_merge(array(
+    return array_merge([
         'batch_id' => (string) Str::uuid(),
         'source' => 'olx_uz',
         'mode' => 'snapshot',
         'collected_at' => now()->toIso8601String(),
-        'items' => array(validListingItem()),
-    ), $overrides);
+        'items' => [validListingItem()],
+    ], $overrides);
 }
 
-function validOfferItem(array $overrides = array()): array
+function validOfferItem(array $overrides = []): array
 {
-    return array_merge(array(
-        'external_id' => 'offer-' . Str::random(8),
+    return array_merge([
+        'external_id' => 'offer-'.Str::random(8),
         'url' => 'https://avto.uzum.uz/cars/cobalt',
         'brand' => 'Chevrolet',
         'model' => 'Cobalt',
         'trim' => 'Style AT',
         'year' => 2026,
-        'price' => array('amount' => 145000000, 'currency' => 'UZS'),
+        'price' => ['amount' => 145000000, 'currency' => 'UZS'],
         'observed_at' => now()->toIso8601String(),
-        'content_hash' => hash('sha256', 'offer-' . Str::random(8)),
-    ), $overrides);
+        'content_hash' => hash('sha256', 'offer-'.Str::random(8)),
+    ], $overrides);
 }
 
-function validOfferBatchPayload(array $overrides = array()): array
+function validOfferBatchPayload(array $overrides = []): array
 {
-    return array_merge(array(
+    return array_merge([
         'batch_id' => (string) Str::uuid(),
         'source' => 'uzum_avto',
         'mode' => 'snapshot',
         'collected_at' => now()->toIso8601String(),
-        'items' => array(validOfferItem()),
-    ), $overrides);
+        'items' => [validOfferItem()],
+    ], $overrides);
 }
 
 // --- market-listings/batches ---
 
 it('rejects market-listings batch requests without authentication', function () {
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
         ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload());
 
     $response->assertStatus(401);
@@ -123,7 +123,7 @@ it('rejects market-listings batch requests missing the Idempotency-Key header', 
 it('rejects market-listings batch requests with a non-UUID Idempotency-Key', function () {
     actingAsParserClient();
 
-    $response = $this->withHeaders(array('Idempotency-Key' => 'not-a-uuid'))
+    $response = $this->withHeaders(['Idempotency-Key' => 'not-a-uuid'])
         ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload());
 
     $response->assertStatus(422);
@@ -132,21 +132,21 @@ it('rejects market-listings batch requests with a non-UUID Idempotency-Key', fun
 it('rejects market-listings batch requests referencing an unknown source code', function () {
     actingAsParserClient();
 
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
-        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('source' => 'no_such_source')));
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(['source' => 'no_such_source']));
 
     $response->assertStatus(422);
 });
 
 it('rejects market-listings batch requests for a source the client is not allowed to use', function () {
-    $restrictedClient = ParserClient::create(array(
+    $restrictedClient = ParserClient::create([
         'name' => 'Restricted client',
         'is_active' => true,
-        'allowed_source_ids' => array($this->manufacturerSource->id), // olx_uz YO'Q ro'yxatda
-    ));
+        'allowed_source_ids' => [$this->manufacturerSource->id], // olx_uz YO'Q ro'yxatda
+    ]);
     Sanctum::actingAs($restrictedClient, ['*']);
 
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
         ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload());
 
     $response->assertStatus(403);
@@ -155,7 +155,7 @@ it('rejects market-listings batch requests for a source the client is not allowe
 it('accepts a valid market-listings batch, processes it synchronously, and stores the items', function () {
     actingAsParserClient();
 
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
         ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload());
 
     $response->assertStatus(202);
@@ -174,9 +174,9 @@ it('is idempotent: replaying the same Idempotency-Key does not create a second b
     $idempotencyKey = (string) Str::uuid();
     $payload = validListingBatchPayload();
 
-    $first = $this->withHeaders(array('Idempotency-Key' => $idempotencyKey))
+    $first = $this->withHeaders(['Idempotency-Key' => $idempotencyKey])
         ->postJson('/api/v1/ingestion/market-listings/batches', $payload);
-    $second = $this->withHeaders(array('Idempotency-Key' => $idempotencyKey))
+    $second = $this->withHeaders(['Idempotency-Key' => $idempotencyKey])
         ->postJson('/api/v1/ingestion/market-listings/batches', $payload);
 
     $first->assertStatus(202);
@@ -189,14 +189,14 @@ it('returns 409 duplicate_batch_conflict when the same batch_id is resent with d
     actingAsParserClient();
     $batchId = (string) Str::uuid();
 
-    $first = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
-        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+    $first = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(['batch_id' => $batchId]));
     $first->assertStatus(202);
 
     // Xuddi shu batch_id, lekin BOSHQA Idempotency-Key va BOSHQA item tarkibi
     // (turli external_id) bilan qayta yuborilmoqda.
-    $second = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
-        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+    $second = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(['batch_id' => $batchId]));
 
     $second->assertStatus(409);
     expect($second->json('code'))->toBe('duplicate_batch_conflict');
@@ -207,19 +207,19 @@ it('returns 409 when a different parser client reuses someone else\'s batch_id',
     actingAsParserClient();
     $batchId = (string) Str::uuid();
 
-    $first = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
-        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+    $first = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(['batch_id' => $batchId]));
     $first->assertStatus(202);
 
-    $otherClient = ParserClient::create(array(
+    $otherClient = ParserClient::create([
         'name' => 'Other parser',
         'is_active' => true,
-        'allowed_source_ids' => array($this->marketplaceSource->id),
-    ));
+        'allowed_source_ids' => [$this->marketplaceSource->id],
+    ]);
     Sanctum::actingAs($otherClient, ['*']);
 
-    $second = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
-        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(array('batch_id' => $batchId)));
+    $second = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+        ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload(['batch_id' => $batchId]));
 
     $second->assertStatus(409);
     expect($second->json('code'))->toBe('duplicate_batch_conflict');
@@ -228,15 +228,15 @@ it('returns 409 when a different parser client reuses someone else\'s batch_id',
 it('forbids a parser client from reading another client\'s batch status', function () {
     actingAsParserClient();
 
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
         ->postJson('/api/v1/ingestion/market-listings/batches', validListingBatchPayload());
     $batchId = $response->json('data.batch_id');
 
-    $otherClient = ParserClient::create(array(
+    $otherClient = ParserClient::create([
         'name' => 'Other parser',
         'is_active' => true,
-        'allowed_source_ids' => array($this->marketplaceSource->id),
-    ));
+        'allowed_source_ids' => [$this->marketplaceSource->id],
+    ]);
     Sanctum::actingAs($otherClient, ['*']);
 
     $this->getJson("/api/v1/ingestion/batches/{$batchId}")->assertStatus(403);
@@ -248,8 +248,8 @@ it('forbids a parser client from reading another client\'s batch status', functi
 it('rejects official-offers batches from a marketplace-type source', function () {
     actingAsParserClient();
 
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
-        ->postJson('/api/v1/ingestion/official-offers/batches', validOfferBatchPayload(array('source' => 'olx_uz')));
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+        ->postJson('/api/v1/ingestion/official-offers/batches', validOfferBatchPayload(['source' => 'olx_uz']));
 
     $response->assertStatus(403);
     expect($response->json('code'))->toBe('source_not_allowed');
@@ -264,7 +264,7 @@ it('accepts official-offers batches from a manufacturer-type source and matches 
     $modelAlias = $aliasService->createPendingAlias(EntityType::Model, $this->model->id, 'Cobalt', $this->manufacturerSource->id);
     $aliasService->verify($modelAlias);
 
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
         ->postJson('/api/v1/ingestion/official-offers/batches', validOfferBatchPayload());
 
     $response->assertStatus(202);
@@ -279,7 +279,7 @@ it('records an unmatched_brand item error when the official-offer brand is not i
     actingAsParserClient();
 
     // Hech qanday alias sozlanmagan — brend resolve bo'lmaydi.
-    $response = $this->withHeaders(array('Idempotency-Key' => (string) Str::uuid()))
+    $response = $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
         ->postJson('/api/v1/ingestion/official-offers/batches', validOfferBatchPayload());
 
     $response->assertStatus(202);
@@ -300,7 +300,7 @@ it('records an unmatched_brand item error when the official-offer brand is not i
 it('returns 404 for an unknown batch id', function () {
     actingAsParserClient();
 
-    $response = $this->getJson('/api/v1/ingestion/batches/' . Str::uuid());
+    $response = $this->getJson('/api/v1/ingestion/batches/'.Str::uuid());
 
     $response->assertStatus(404);
 });
@@ -321,8 +321,8 @@ it('heartbeat requires authentication and updates last_seen_at', function () {
 it('catalog endpoint returns only active brands and models', function () {
     actingAsParserClient();
 
-    $inactiveBrand = Brand::create(array('name' => 'Retired', 'slug' => 'retired', 'is_active' => false, 'sort_order' => 9));
-    CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Discontinued', 'slug' => 'discontinued', 'is_active' => false));
+    $inactiveBrand = Brand::create(['name' => 'Retired', 'slug' => 'retired', 'is_active' => false, 'sort_order' => 9]);
+    CarModel::create(['brand_id' => $this->brand->id, 'name' => 'Discontinued', 'slug' => 'discontinued', 'is_active' => false]);
 
     $response = $this->getJson('/api/v1/ingestion/catalog');
 

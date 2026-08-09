@@ -12,8 +12,7 @@ class DiscoveredBrandService
 {
     public function __construct(
         private readonly CatalogAliasService $aliasService,
-    ) {
-    }
+    ) {}
 
     /**
      * Admin tasdiqlagach: mavjud markaga bog'laydi (agar $existingBrandId berilgan

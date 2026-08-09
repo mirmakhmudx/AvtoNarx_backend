@@ -17,18 +17,17 @@ class ParserTargetDiscoveryService
      * bitta yozuvga birlashtirish uchun ishlatiladi — katalogga yangi model
      * yaratish uchun EMAS (bu TZ 10-bo'lim bo'yicha taqiqlangan).
      */
-    private const CYRILLIC_TO_LATIN_MAP = array(
+    private const CYRILLIC_TO_LATIN_MAP = [
         'А' => 'A', 'В' => 'B', 'Е' => 'E', 'К' => 'K', 'М' => 'M',
         'Н' => 'H', 'О' => 'O', 'Р' => 'P', 'С' => 'C', 'Т' => 'T', 'Х' => 'X',
         'а' => 'a', 'е' => 'e', 'о' => 'o', 'р' => 'p', 'с' => 'c', 'х' => 'x',
-    );
+    ];
 
-    private const REJECT_KEYWORDS = array('область', 'каракалпакстан', 'другие', 'показать', 'все категории');
+    private const REJECT_KEYWORDS = ['область', 'каракалпакстан', 'другие', 'показать', 'все категории'];
 
     public function __construct(
         private readonly CatalogAliasService $aliasService,
-    ) {
-    }
+    ) {}
 
     /**
      * TZ 10-bo'lim, so'zma-so'z: "Parser payload'idan yangi markalar va
@@ -72,7 +71,7 @@ class ParserTargetDiscoveryService
             $unmatchedCount++;
         }
 
-        return array('matched' => $matchedCount, 'unmatched' => $unmatchedCount, 'skipped_junk' => $skippedJunkCount);
+        return ['matched' => $matchedCount, 'unmatched' => $unmatchedCount, 'skipped_junk' => $skippedJunkCount];
     }
 
     /**
@@ -86,13 +85,13 @@ class ParserTargetDiscoveryService
     public function deduplicatePendingCandidates(): array
     {
         $pending = UnmatchedBrandModelCandidate::where('status', 'pending')->get();
-        $seen = array();
+        $seen = [];
         $mergedCount = 0;
 
         foreach ($pending as $candidate) {
-            $key = $candidate->source_id . '|'
-                . $this->normalizeForMatching($candidate->brand_name_raw) . '|'
-                . $this->normalizeForMatching($candidate->model_name_raw);
+            $key = $candidate->source_id.'|'
+                .$this->normalizeForMatching($candidate->brand_name_raw).'|'
+                .$this->normalizeForMatching($candidate->model_name_raw);
 
             if (isset($seen[$key])) {
                 // Bu allaqachon ko'rilgan (vizual duplikat) — takroriy qatorni
@@ -106,7 +105,7 @@ class ParserTargetDiscoveryService
             $seen[$key] = true;
         }
 
-        return array('merged' => $mergedCount);
+        return ['merged' => $mergedCount];
     }
 
     private function upsertPendingCandidate(Source $source, array $entry): void
@@ -116,11 +115,11 @@ class ParserTargetDiscoveryService
         // Yozuv birinchi marta yaratilganda first_seen_at hozirgi vaqt bilan
         // to'ldiriladi va keyin hech qachon o'zgartirilmaydi; last_seen_at
         // esa har safar yangilanadi.
-        $candidate = UnmatchedBrandModelCandidate::firstOrNew(array(
+        $candidate = UnmatchedBrandModelCandidate::firstOrNew([
             'source_id' => $source->id,
             'brand_name_raw' => $entry['brand_name'],
             'model_name_raw' => $entry['model_name'],
-        ));
+        ]);
 
         if (! $candidate->exists) {
             $candidate->first_seen_at = now();
@@ -167,15 +166,15 @@ class ParserTargetDiscoveryService
     private function activateParserTarget(Source $source, int $brandId, int $modelId, string $url): void
     {
         ParserTarget::updateOrCreate(
-            array(
+            [
                 'source_id' => $source->id,
                 'model_id' => $modelId,
-            ),
-            array(
+            ],
+            [
                 'brand_id' => $brandId,
                 'target_url' => $url,
                 'is_active' => true,
-            )
+            ]
         );
     }
 }

@@ -22,6 +22,7 @@ class DiscoverOlxModelsJob implements ShouldQueue
     private const REQUEST_DELAY_SECONDS = 1;
 
     public int $tries = 1;
+
     public int $timeout = 3600; // 1 soat — 100+ so'rov uchun yetarli vaqt
 
     public function handle(
@@ -50,21 +51,21 @@ class DiscoverOlxModelsJob implements ShouldQueue
             try {
                 $models = $adapter->discoverModels($discoveredBrand->slug);
             } catch (\Throwable $e) {
-                Log::warning("DiscoverOlxModelsJob: {$discoveredBrand->name} uchun xato — " . $e->getMessage());
+                Log::warning("DiscoverOlxModelsJob: {$discoveredBrand->name} uchun xato — ".$e->getMessage());
 
                 // Bitta marka bloklansa/xato bersa, TO'XTAYMIZ — TZ qoidasi:
                 // 403/429/blok aniqlansa qayta urinilmaydi, davom ettirilmaydi.
                 break;
             }
 
-            $discovered = array();
+            $discovered = [];
 
             foreach ($models as $model) {
-                $discovered[] = array(
+                $discovered[] = [
                     'brand_name' => $discoveredBrand->name,
                     'model_name' => $model['name'],
                     'url' => $model['url'],
-                );
+                ];
             }
 
             $result = $discoveryService->processDiscoveredCombinations($source, $discovered);
@@ -73,7 +74,7 @@ class DiscoverOlxModelsJob implements ShouldQueue
             $totalUnmatched += $result['unmatched'];
             $processedBrands++;
 
-            $discoveredBrand->update(array('last_models_checked_at' => now()));
+            $discoveredBrand->update(['last_models_checked_at' => now()]);
 
             sleep(self::REQUEST_DELAY_SECONDS);
         }

@@ -15,35 +15,35 @@ class StoreMarketListingBatchRequest extends FormRequest
 
     public function rules(): array
     {
-        return array(
-            'batch_id' => array('required', 'uuid'),
-            'source' => array('required', 'string', 'exists:sources,code'),
-            'mode' => array('required', 'string', 'in:incremental,snapshot,offline_html'),
-            'parser_version' => array('nullable', 'string', 'max:50'),
-            'collected_at' => array('required', 'date'),
-            'items' => array('required', 'array', 'min:1', 'max:500'),
-            'items.*.external_id' => array('required', 'string', 'max:255'),
-            'items.*.url' => array('required', 'string', 'max:1000', 'url'),
-            'items.*.brand' => array('required', 'string', 'max:180'),
-            'items.*.model' => array('required', 'string', 'max:180'),
+        return [
+            'batch_id' => ['required', 'uuid'],
+            'source' => ['required', 'string', 'exists:sources,code'],
+            'mode' => ['required', 'string', 'in:incremental,snapshot,offline_html'],
+            'parser_version' => ['nullable', 'string', 'max:50'],
+            'collected_at' => ['required', 'date'],
+            'items' => ['required', 'array', 'min:1', 'max:500'],
+            'items.*.external_id' => ['required', 'string', 'max:255'],
+            'items.*.url' => ['required', 'string', 'max:1000', 'url'],
+            'items.*.brand' => ['required', 'string', 'max:180'],
+            'items.*.model' => ['required', 'string', 'max:180'],
             // TZ 8.2: year majburiy; oraliq 1950..joriy yil+1 (invalid_year).
-            'items.*.year' => array('required', 'integer', 'min:1950', 'max:' . ((int) date('Y') + 1)),
-            'items.*.price.amount' => array('required', 'integer', 'min:1'),
-            'items.*.price.currency' => array('required', 'string', 'in:UZS,USD'),
-            'items.*.condition' => array('nullable', 'string'),
-            'items.*.seller_type' => array('nullable', 'string'),
-            'items.*.location.region' => array('nullable', 'string', 'max:180'),
-            'items.*.location.city' => array('nullable', 'string', 'max:180'),
-            'items.*.observed_at' => array('required', 'date'),
-            'items.*.published_at' => array('nullable', 'date'),
+            'items.*.year' => ['required', 'integer', 'min:1950', 'max:'.((int) date('Y') + 1)],
+            'items.*.price.amount' => ['required', 'integer', 'min:1'],
+            'items.*.price.currency' => ['required', 'string', 'in:UZS,USD'],
+            'items.*.condition' => ['nullable', 'string'],
+            'items.*.seller_type' => ['nullable', 'string'],
+            'items.*.location.region' => ['nullable', 'string', 'max:180'],
+            'items.*.location.city' => ['nullable', 'string', 'max:180'],
+            'items.*.observed_at' => ['required', 'date'],
+            'items.*.published_at' => ['nullable', 'date'],
             // TZ 8.2: content_hash majburiy va 64 belgili hex (SHA-256).
-            'items.*.content_hash' => array('required', 'string', 'regex:/^[0-9a-f]{64}$/i'),
-        );
+            'items.*.content_hash' => ['required', 'string', 'regex:/^[0-9a-f]{64}$/i'],
+        ];
     }
 
     public function messages(): array
     {
-        return array(
+        return [
             'items.*.year.required' => 'invalid_year',
             'items.*.year.integer' => 'invalid_year',
             'items.*.year.min' => 'invalid_year',
@@ -51,7 +51,7 @@ class StoreMarketListingBatchRequest extends FormRequest
             'items.*.content_hash.required' => 'invalid_content_hash',
             'items.*.content_hash.regex' => 'invalid_content_hash',
             'items.*.url.url' => 'invalid_url_domain',
-        );
+        ];
     }
 
     /**
@@ -84,9 +84,9 @@ class StoreMarketListingBatchRequest extends FormRequest
             // aks holda manbaning ro'yxatga olinadigan (registrable) domeni.
             $allowedDomains = is_array($source->settings['allowed_domains'] ?? null)
                 ? array_map(fn ($d) => strtolower((string) $d), $source->settings['allowed_domains'])
-                : array($this->registrableDomain($sourceHost));
+                : [$this->registrableDomain($sourceHost)];
 
-            foreach ((array) $this->input('items', array()) as $index => $item) {
+            foreach ((array) $this->input('items', []) as $index => $item) {
                 $url = is_array($item) ? ($item['url'] ?? null) : null;
 
                 if (! is_string($url) || $url === '') {
@@ -136,7 +136,7 @@ class StoreMarketListingBatchRequest extends FormRequest
                 continue;
             }
 
-            if ($host === $domain || str_ends_with($host, '.' . $domain) || $this->registrableDomain($host) === $domain) {
+            if ($host === $domain || str_ends_with($host, '.'.$domain) || $this->registrableDomain($host) === $domain) {
                 return true;
             }
         }

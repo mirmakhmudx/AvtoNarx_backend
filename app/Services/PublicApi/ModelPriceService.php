@@ -12,8 +12,7 @@ class ModelPriceService
     public function __construct(
         private readonly OfficialOfferService $officialOfferService,
         private readonly MarketStatisticsService $statisticsService,
-    ) {
-    }
+    ) {}
 
     public function getPriceStatuses(CarModel $carModel, ?int $year = null, ?string $regionCode = null): array
     {
@@ -31,18 +30,18 @@ class ModelPriceService
 
         $statistics = $query->orderByDesc('year')->get()->keyBy('year');
 
-        $years = $year !== null ? array($year) : $this->discoverYears($carModel);
+        $years = $year !== null ? [$year] : $this->discoverYears($carModel);
 
-        $result = array();
+        $result = [];
 
         foreach ($years as $y) {
             if ($statistics->has($y)) {
                 $stat = $statistics->get($y);
-                $result[] = array(
+                $result[] = [
                     'year' => $y,
                     'status' => 'ok',
                     'statistic' => $stat,
-                );
+                ];
 
                 continue;
             }
@@ -54,13 +53,13 @@ class ModelPriceService
                 $regionCode
             );
 
-            $result[] = array(
+            $result[] = [
                 'year' => $y,
                 'status' => $availableCount > 0 ? 'insufficient_sample' : 'no_data',
                 'sample_size' => $availableCount,
                 'min_required' => (int) config('market_statistics.min_sample_size', MarketStatisticsService::MIN_SAMPLE_SIZE),
                 'statistic' => null,
-            );
+            ];
         }
 
         return $result;
@@ -82,7 +81,7 @@ class ModelPriceService
         $merged = array_unique(array_merge($statYears, $listingYears));
         rsort($merged);
 
-        return empty($merged) ? array(null) : $merged;
+        return empty($merged) ? [null] : $merged;
     }
 
     public function getCheapestOfficialOffer(CarModel $carModel, ?int $year = null)

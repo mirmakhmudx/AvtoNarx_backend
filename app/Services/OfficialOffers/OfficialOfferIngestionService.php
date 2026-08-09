@@ -25,8 +25,7 @@ class OfficialOfferIngestionService
     public function __construct(
         private readonly CatalogAliasService $aliasService,
         private readonly ExchangeRateService $exchangeRateService,
-    ) {
-    }
+    ) {}
 
     public function ingest(OfficialOfferData $data): OfficialOffer
     {
@@ -58,7 +57,7 @@ class OfficialOfferIngestionService
 
         $priceUnchanged = $existing !== null && $existing->content_hash === $data->contentHash;
 
-        $attributes = array(
+        $attributes = [
             'source_id' => $data->sourceId,
             'brand_id' => $brandId,
             'model_id' => $modelId,
@@ -73,17 +72,17 @@ class OfficialOfferIngestionService
             'valid_to' => $data->validTo,
             'observed_at' => $data->observedAt,
             'content_hash' => $data->contentHash,
-        );
+        ];
 
         if ($priceUnchanged) {
             // Narx o'zgarmagan — faqat "yana kuzatildi" faktini yozamiz,
             // moderatsiya holatini qayta ochmaymiz (TZ: faqat YANGI yoki
             // O'ZGARGAN narx pending bo'ladi).
-            $existing->update(array(
+            $existing->update([
                 'observed_at' => $data->observedAt,
                 'valid_from' => $data->validFrom,
                 'valid_to' => $data->validTo,
-            ));
+            ]);
 
             return $existing->refresh();
         }

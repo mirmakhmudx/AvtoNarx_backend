@@ -9,7 +9,7 @@ class MarketPriceStatistic extends Model
 {
     protected $table = 'market_price_statistics';
 
-    protected $fillable = array(
+    protected $fillable = [
         'brand_id',
         'model_id',
         'year',
@@ -27,9 +27,9 @@ class MarketPriceStatistic extends Model
         'period_to',
         'method_version',
         'calculated_at',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'year' => 'integer',
         'sample_size' => 'integer',
         'excluded_count' => 'integer',
@@ -42,7 +42,7 @@ class MarketPriceStatistic extends Model
         'period_from' => 'datetime',
         'period_to' => 'datetime',
         'calculated_at' => 'datetime',
-    );
+    ];
 
     public function brand(): BelongsTo
     {

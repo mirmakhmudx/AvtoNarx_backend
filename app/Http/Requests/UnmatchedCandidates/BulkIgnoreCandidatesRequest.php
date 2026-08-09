@@ -13,9 +13,9 @@ class BulkIgnoreCandidatesRequest extends FormRequest
 
     public function rules(): array
     {
-        return array(
-            'ids' => array('required', 'array', 'min:1'),
-            'ids.*' => array('integer', 'exists:unmatched_brand_model_candidates,id'),
-        );
+        return [
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:unmatched_brand_model_candidates,id'],
+        ];
     }
 }

@@ -17,8 +17,8 @@ class ProcessOfficialOfferBatchJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-
     public int $tries = 3;
+
     public int $backoff = 10;
 
     public function __construct(
@@ -36,41 +36,41 @@ class ProcessOfficialOfferBatchJob implements ShouldQueue
             return;
         }
 
-        $batch->update(array('status' => 'processing'));
+        $batch->update(['status' => 'processing']);
 
         $accepted = 0;
         $rejected = 0;
 
         foreach ($this->items as $index => $item) {
             try {
-                $dto = OfficialOfferData::fromArray(array_merge($item, array(
+                $dto = OfficialOfferData::fromArray(array_merge($item, [
                     'source_id' => $batch->source_id,
-                )));
+                ]));
 
                 $ingestionService->ingest($dto);
                 $accepted++;
             } catch (UnmatchedCatalogEntityException $e) {
                 $rejected++;
 
-                IngestionItemError::create(array(
+                IngestionItemError::create([
                     'batch_id' => $batch->id,
                     'item_index' => $index,
                     'external_id' => $item['external_id'] ?? null,
                     'code' => $e->errorCode(),
                     'field' => null,
                     'message' => $e->getMessage(),
-                ));
+                ]);
             } catch (\Throwable $e) {
                 $rejected++;
 
-                IngestionItemError::create(array(
+                IngestionItemError::create([
                     'batch_id' => $batch->id,
                     'item_index' => $index,
                     'external_id' => $item['external_id'] ?? null,
                     'code' => 'processing_error',
                     'field' => null,
                     'message' => $e->getMessage(),
-                ));
+                ]);
             }
         }
 
@@ -82,11 +82,11 @@ class ProcessOfficialOfferBatchJob implements ShouldQueue
             $status = 'failed';
         }
 
-        $batch->update(array(
+        $batch->update([
             'items_accepted' => $accepted,
             'items_rejected' => $rejected,
             'status' => $status,
             'completed_at' => now(),
-        ));
+        ]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\ListingStatus;
 use App\Enums\NormalizationStatus;
+use App\Filament\Concerns\TranslatesLabels;
 use App\Filament\Resources\MarketListingResource\Pages;
 use App\Models\MarketListing;
 use Filament\Forms;
@@ -11,9 +12,13 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class MarketListingResource extends Resource
 {
+    use TranslatesLabels;
+
     protected static ?string $model = MarketListing::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
@@ -53,15 +58,15 @@ class MarketListingResource extends Resource
                     ->columns(3)
                     ->schema([
                         Forms\Components\TextInput::make('brand_raw')
-                            ->label('Marka (xom)')
+                            ->label(__('Marka (xom)'))
                             ->disabled(),
 
                         Forms\Components\TextInput::make('model_raw')
-                            ->label('Model (xom)')
+                            ->label(__('Model (xom)'))
                             ->disabled(),
 
                         Forms\Components\TextInput::make('canonical_url')
-                            ->label('Havola')
+                            ->label(__('Havola'))
                             ->disabled()
                             ->columnSpanFull(),
                     ]),
@@ -70,7 +75,7 @@ class MarketListingResource extends Resource
                     ->columns(3)
                     ->schema([
                         Forms\Components\Select::make('brand_id')
-                            ->label('To\'g\'ri marka')
+                            ->label(__('To\'g\'ri marka'))
                             ->relationship('brand', 'name')
                             ->searchable()
                             ->preload()
@@ -78,11 +83,11 @@ class MarketListingResource extends Resource
                             ->afterStateUpdated(fn (Forms\Set $set) => $set('model_id', null)),
 
                         Forms\Components\Select::make('model_id')
-                            ->label('To\'g\'ri model')
+                            ->label(__('To\'g\'ri model'))
                             ->relationship(
                                 name: 'carModel',
                                 titleAttribute: 'name',
-                                modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query, Forms\Get $get) => $get('brand_id')
+                                modifyQueryUsing: fn (Builder $query, Forms\Get $get) => $get('brand_id')
                                     ? $query->where('brand_id', $get('brand_id'))
                                     : $query,
                             )
@@ -90,11 +95,11 @@ class MarketListingResource extends Resource
                             ->preload(),
 
                         Forms\Components\Select::make('normalization_status')
-                            ->label('Moslashtirish holati')
+                            ->label(__('Moslashtirish holati'))
                             ->options([
-                                'matched' => 'Moslashtirilgan',
-                                'pending' => 'Kutmoqda',
-                                'rejected' => 'Rad etilgan',
+                                'matched' => __('Moslashtirilgan'),
+                                'pending' => __('Kutmoqda'),
+                                'rejected' => __('Rad etilgan'),
                             ])
                             ->required(),
                     ]),
@@ -103,16 +108,16 @@ class MarketListingResource extends Resource
                     ->columns(2)
                     ->schema([
                         Forms\Components\Select::make('status')
-                            ->label('E\'lon holati')
+                            ->label(__('E\'lon holati'))
                             ->options([
-                                'active' => 'Faol',
-                                'inactive' => 'Faol emas',
+                                'active' => __('Faol'),
+                                'inactive' => __('Faol emas'),
                                 'removed' => 'O\'chirilgan',
                             ])
                             ->required(),
 
                         Forms\Components\TextInput::make('year')
-                            ->label('Yil')
+                            ->label(__('Yil'))
                             ->numeric(),
                     ]),
             ]);
@@ -123,28 +128,28 @@ class MarketListingResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('brand_raw')
-                    ->label('Marka / Model')
+                    ->label(__('Marka / Model'))
                     ->formatStateUsing(fn (MarketListing $record): string => trim(($record->brand?->name ?? $record->brand_raw ?? '—').' '.($record->carModel?->name ?? $record->model_raw ?? '')))
                     ->searchable(['brand_raw', 'model_raw'])
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('year')
-                    ->label('Yil')
+                    ->label(__('Yil'))
                     ->sortable()
-                    ->placeholder('—'),
+                    ->placeholder(__('—')),
 
                 Tables\Columns\TextColumn::make('price_uzs')
-                    ->label('Narx')
+                    ->label(__('Narx'))
                     ->formatStateUsing(fn (MarketListing $record): string => number_format($record->price_amount).' '.$record->currency->value
                         .($record->currency->value !== 'UZS' && $record->price_uzs ? ' ('.number_format($record->price_uzs).' UZS)' : ''))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('source.name')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('normalization_status')
-                    ->label('Moslashtirish')
+                    ->label(__('Moslashtirish'))
                     ->badge()
                     ->color(fn (NormalizationStatus $state): string => match ($state) {
                         NormalizationStatus::Matched => 'success',
@@ -152,13 +157,13 @@ class MarketListingResource extends Resource
                         NormalizationStatus::Rejected => 'danger',
                     })
                     ->formatStateUsing(fn (NormalizationStatus $state): string => match ($state) {
-                        NormalizationStatus::Matched => 'Moslashtirilgan',
-                        NormalizationStatus::Pending => 'Kutmoqda',
-                        NormalizationStatus::Rejected => 'Rad etilgan',
+                        NormalizationStatus::Matched => __('Moslashtirilgan'),
+                        NormalizationStatus::Pending => __('Kutmoqda'),
+                        NormalizationStatus::Rejected => __('Rad etilgan'),
                     }),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Holat')
+                    ->label(__('Holat'))
                     ->badge()
                     ->color(fn (ListingStatus $state): string => match ($state) {
                         ListingStatus::Active => 'success',
@@ -166,17 +171,17 @@ class MarketListingResource extends Resource
                         ListingStatus::Removed => 'danger',
                     })
                     ->formatStateUsing(fn (ListingStatus $state): string => match ($state) {
-                        ListingStatus::Active => 'Faol',
-                        ListingStatus::Inactive => 'Faol emas',
+                        ListingStatus::Active => __('Faol'),
+                        ListingStatus::Inactive => __('Faol emas'),
                         ListingStatus::Removed => 'O\'chirilgan',
                     }),
 
                 Tables\Columns\TextColumn::make('region')
-                    ->label('Hudud')
-                    ->placeholder('—'),
+                    ->label(__('Hudud'))
+                    ->placeholder(__('—')),
 
                 Tables\Columns\TextColumn::make('last_seen_at')
-                    ->label('Oxirgi ko\'rilgan')
+                    ->label(__('Oxirgi ko\'rilgan'))
                     ->dateTime('d.m.Y H:i')
                     ->since()
                     ->sortable(),
@@ -184,64 +189,64 @@ class MarketListingResource extends Resource
             ->defaultSort('last_seen_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('source_id')
-                    ->label('Manba')
+                    ->label(__('Manba'))
                     ->relationship('source', 'name'),
 
                 Tables\Filters\SelectFilter::make('brand_id')
-                    ->label('Marka')
+                    ->label(__('Marka'))
                     ->relationship('brand', 'name')
                     ->searchable(),
 
                 Tables\Filters\SelectFilter::make('normalization_status')
-                    ->label('Moslashtirish')
+                    ->label(__('Moslashtirish'))
                     ->options([
-                        'matched' => 'Moslashtirilgan',
-                        'pending' => 'Kutmoqda',
-                        'rejected' => 'Rad etilgan',
+                        'matched' => __('Moslashtirilgan'),
+                        'pending' => __('Kutmoqda'),
+                        'rejected' => __('Rad etilgan'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Holat')
+                    ->label(__('Holat'))
                     ->options([
-                        'active' => 'Faol',
-                        'inactive' => 'Faol emas',
+                        'active' => __('Faol'),
+                        'inactive' => __('Faol emas'),
                         'removed' => 'O\'chirilgan',
                     ]),
 
                 Tables\Filters\SelectFilter::make('condition')
-                    ->label('Holati (yangi/eski)')
+                    ->label(__('Holati (yangi/eski)'))
                     ->options([
-                        'new' => 'Yangi',
-                        'used' => 'Ishlatilgan',
-                        'unknown' => 'Noma\'lum',
+                        'new' => __('Yangi'),
+                        'used' => __('Ishlatilgan'),
+                        'unknown' => __('Noma\'lum'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('seller_type')
-                    ->label('Sotuvchi turi')
+                    ->label(__('Sotuvchi turi'))
                     ->options([
-                        'private' => 'Jismoniy shaxs',
-                        'dealer' => 'Diler',
-                        'unknown' => 'Noma\'lum',
+                        'private' => __('Jismoniy shaxs'),
+                        'dealer' => __('Diler'),
+                        'unknown' => __('Noma\'lum'),
                     ]),
             ])
             ->actions([
                 Tables\Actions\Action::make('open')
-                    ->label('Ko\'rish')
+                    ->label(__('Ko\'rish'))
                     ->icon('heroicon-o-arrow-top-right-on-square')
                     ->url(fn (MarketListing $record): string => $record->canonical_url)
                     ->openUrlInNewTab()
                     ->color('primary'),
 
                 Tables\Actions\EditAction::make()
-                    ->label('To\'g\'irlash'),
+                    ->label(__('To\'g\'irlash')),
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('mark_removed')
-                    ->label('Tanlanganlarni "o\'chirilgan" deb belgilash')
+                    ->label(__('Tanlanganlarni "o\'chirilgan" deb belgilash'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(fn (\Illuminate\Support\Collection $records) => $records->each->update(['status' => 'removed']))
+                    ->action(fn (Collection $records) => $records->each->update(['status' => 'removed']))
                     ->deselectRecordsAfterCompletion(),
             ]);
     }

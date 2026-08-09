@@ -3,7 +3,7 @@
 use App\Services\Parser\Extraction\YearExtractor;
 
 beforeEach(function () {
-    $this->extractor = new YearExtractor();
+    $this->extractor = new YearExtractor;
 });
 
 it('extracts a valid year from title', function () {

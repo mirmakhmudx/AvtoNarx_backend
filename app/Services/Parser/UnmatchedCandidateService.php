@@ -13,8 +13,7 @@ class UnmatchedCandidateService
 {
     public function __construct(
         private readonly CatalogAliasService $aliasService,
-    ) {
-    }
+    ) {}
 
     /**
      * @return Collection<int, UnmatchedBrandModelCandidate>
@@ -48,7 +47,7 @@ class UnmatchedCandidateService
             ->groupBy('brand_name_raw')
             ->orderByDesc('count')
             ->get()
-            ->map(fn ($row) => array('brand' => $row->brand, 'count' => (int) $row->count))
+            ->map(fn ($row) => ['brand' => $row->brand, 'count' => (int) $row->count])
             ->all();
     }
 
@@ -63,13 +62,13 @@ class UnmatchedCandidateService
         string $modelSlug,
         ?int $productionFrom = null,
     ): CarModel {
-        $carModel = CarModel::create(array(
+        $carModel = CarModel::create([
             'brand_id' => $brandId,
             'name' => $modelName,
             'slug' => $modelSlug,
             'production_from' => $productionFrom,
             'is_active' => true,
-        ));
+        ]);
 
         // Brand alias — agar hali tasdiqlanmagan bo'lsa, tasdiqlaymiz
         $brandAlias = $this->aliasService->createPendingAlias(
@@ -91,25 +90,25 @@ class UnmatchedCandidateService
 
         // Parser target — endi shu model uchun ham narx yig'ila boshlaydi
         ParserTarget::updateOrCreate(
-            array(
+            [
                 'source_id' => $candidate->source_id,
                 'model_id' => $carModel->id,
-            ),
-            array(
+            ],
+            [
                 'brand_id' => $brandId,
                 'target_url' => $candidate->discovered_url,
                 'is_active' => true,
-            )
+            ]
         );
 
-        $candidate->update(array('status' => 'resolved'));
+        $candidate->update(['status' => 'resolved']);
 
         return $carModel;
     }
 
     public function ignore(UnmatchedBrandModelCandidate $candidate): void
     {
-        $candidate->update(array('status' => 'ignored'));
+        $candidate->update(['status' => 'ignored']);
     }
 
     /**
@@ -121,7 +120,7 @@ class UnmatchedCandidateService
     {
         return UnmatchedBrandModelCandidate::whereIn('id', $ids)
             ->where('status', 'pending')
-            ->update(array('status' => 'ignored'));
+            ->update(['status' => 'ignored']);
     }
 
     /**
@@ -137,6 +136,6 @@ class UnmatchedCandidateService
             $query->where('brand_name_raw', 'ILIKE', $brandFilter);
         }
 
-        return $query->update(array('status' => 'ignored'));
+        return $query->update(['status' => 'ignored']);
     }
 }

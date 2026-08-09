@@ -5,17 +5,17 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 it('reflects a configured trusted origin on API responses (TZ 16)', function () {
-    config()->set('cors.allowed_origins', array('https://trusted.example'));
+    config()->set('cors.allowed_origins', ['https://trusted.example']);
 
-    $this->withHeaders(array('Origin' => 'https://trusted.example'))
+    $this->withHeaders(['Origin' => 'https://trusted.example'])
         ->getJson('/api/v1/brands')
         ->assertHeader('Access-Control-Allow-Origin', 'https://trusted.example');
 });
 
 it('does NOT allow an untrusted origin (TZ 16)', function () {
-    config()->set('cors.allowed_origins', array('https://trusted.example'));
+    config()->set('cors.allowed_origins', ['https://trusted.example']);
 
-    $response = $this->withHeaders(array('Origin' => 'https://evil.example'))
+    $response = $this->withHeaders(['Origin' => 'https://evil.example'])
         ->getJson('/api/v1/brands');
 
     // Ishonchsiz origin aks ettirilmasligi kerak.
@@ -24,10 +24,10 @@ it('does NOT allow an untrusted origin (TZ 16)', function () {
 });
 
 it('handles a CORS preflight (OPTIONS) for a trusted origin', function () {
-    config()->set('cors.allowed_origins', array('https://trusted.example'));
+    config()->set('cors.allowed_origins', ['https://trusted.example']);
 
-    $this->call('OPTIONS', '/api/v1/brands', array(), array(), array(), array(
+    $this->call('OPTIONS', '/api/v1/brands', [], [], [], [
         'HTTP_ORIGIN' => 'https://trusted.example',
         'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'GET',
-    ))->assertHeader('Access-Control-Allow-Origin', 'https://trusted.example');
+    ])->assertHeader('Access-Control-Allow-Origin', 'https://trusted.example');
 });

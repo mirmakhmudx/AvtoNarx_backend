@@ -37,12 +37,12 @@ class RunParserSourceJob implements ShouldQueue
     private const CHUNK_SIZE = 20;
 
     public int $tries = 1;
+
     public int $timeout = 120;
 
     public function __construct(
         private readonly string $sourceCode,
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {
@@ -63,7 +63,7 @@ class RunParserSourceJob implements ShouldQueue
         if ($source->isCurrentlyBlocked()) {
             Log::info(
                 "RunParserSourceJob: {$this->sourceCode} hali \"tinch turish\" davrida "
-                . "({$source->blocked_until->toIso8601String()} gacha) — bugungi ishga tushirish butunlay o'tkazib yuborildi."
+                ."({$source->blocked_until->toIso8601String()} gacha) — bugungi ishga tushirish butunlay o'tkazib yuborildi."
             );
 
             return;
@@ -83,7 +83,7 @@ class RunParserSourceJob implements ShouldQueue
         $chunks = array_chunk($targetIds, self::CHUNK_SIZE);
         $totalChunks = count($chunks);
 
-        Log::info("RunParserSourceJob: {$this->sourceCode} uchun " . count($targetIds) . " ta target, {$totalChunks} ta partiyaga bo'lindi.");
+        Log::info("RunParserSourceJob: {$this->sourceCode} uchun ".count($targetIds)." ta target, {$totalChunks} ta partiyaga bo'lindi.");
 
         foreach ($chunks as $index => $chunkTargetIds) {
             RunParserTargetsChunkJob::dispatch(

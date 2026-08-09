@@ -3,7 +3,7 @@
 use App\Services\Parser\Extraction\ExternalIdBuilder;
 
 beforeEach(function () {
-    $this->builder = new ExternalIdBuilder();
+    $this->builder = new ExternalIdBuilder;
 });
 
 it('extracts ID from canonical url when present', function () {

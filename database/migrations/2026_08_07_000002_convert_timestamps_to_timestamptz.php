@@ -64,7 +64,7 @@ return new class extends Migration
                from information_schema.columns
               where table_schema = current_schema()
                 and data_type = ?',
-            array($dataType),
+            [$dataType],
         );
     }
 };

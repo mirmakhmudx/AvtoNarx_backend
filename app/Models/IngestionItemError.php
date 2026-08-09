@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class IngestionItemError extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'batch_id',
         'item_index',
         'external_id',
@@ -15,12 +15,12 @@ class IngestionItemError extends Model
         'field',
         'message',
         'payload_excerpt',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'payload_excerpt' => 'array',
         'item_index' => 'integer',
-    );
+    ];
 
     public function batch(): BelongsTo
     {

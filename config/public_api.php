@@ -1,6 +1,6 @@
 <?php
 
-return array(
+return [
     'cache_ttl_seconds' => (int) env('PUBLIC_API_CACHE_TTL', 300),
 
     /*
@@ -22,4 +22,4 @@ return array(
     */
     'per_page' => (int) env('PUBLIC_API_PER_PAGE', 20),
     'max_per_page' => (int) env('PUBLIC_API_MAX_PER_PAGE', 100),
-);
+];

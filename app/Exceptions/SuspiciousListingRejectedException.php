@@ -1,7 +1,7 @@
 <?php
- 
+
 namespace App\Exceptions;
- 
+
 /**
  * E'lon "shubhali" deb topilib rad etilganda tashlanadi (masalan mashina
  * uchun aqlga sig'maydigan narx yoki OLX fallback natijasi).
@@ -19,7 +19,7 @@ class SuspiciousListingRejectedException extends \RuntimeException
     ) {
         parent::__construct($message);
     }
- 
+
     public function errorCode(): string
     {
         return $this->errorCode;

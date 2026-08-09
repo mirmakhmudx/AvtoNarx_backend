@@ -38,7 +38,7 @@ class PurgeStaleListingsCommand extends Command
         $threshold = now()->subDays($days);
 
         $query = MarketListing::query()
-            ->whereIn('status', array(ListingStatus::Inactive->value, ListingStatus::Removed->value))
+            ->whereIn('status', [ListingStatus::Inactive->value, ListingStatus::Removed->value])
             ->where('last_seen_at', '<', $threshold);
 
         $total = (clone $query)->count();

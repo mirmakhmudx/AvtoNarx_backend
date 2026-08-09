@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->source = Source::create(array(
+    $this->source = Source::create([
         'code' => 'olx_uz',
         'name' => 'OLX.uz',
         'type' => 'marketplace',
@@ -19,25 +19,24 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'unverified',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
 
-    $this->brand = Brand::create(array('name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1));
-    $this->model = CarModel::create(array('brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true));
+    $this->brand = Brand::create(['name' => 'Chevrolet', 'slug' => 'chevrolet', 'is_active' => true, 'sort_order' => 1]);
+    $this->model = CarModel::create(['brand_id' => $this->brand->id, 'name' => 'Cobalt', 'slug' => 'cobalt', 'is_active' => true]);
 
     $this->service = app(MarketStatisticsService::class);
 });
 
-
-function makeMatchedListing(int $brandId, int $modelId, ?int $year, array $overrides = array()): MarketListing
+function makeMatchedListing(int $brandId, int $modelId, ?int $year, array $overrides = []): MarketListing
 {
     static $counter = 0;
     $counter++;
 
-    return MarketListing::create(array_merge(array(
+    return MarketListing::create(array_merge([
         'source_id' => 1,
-        'external_id' => 'stat-test-' . $counter,
-        'canonical_url' => 'https://www.olx.uz/d/obyavlenie/stat-test-' . $counter . '.html',
+        'external_id' => 'stat-test-'.$counter,
+        'canonical_url' => 'https://www.olx.uz/d/obyavlenie/stat-test-'.$counter.'.html',
         'brand_raw' => 'Chevrolet',
         'model_raw' => 'Cobalt',
         'brand_id' => $brandId,
@@ -54,18 +53,18 @@ function makeMatchedListing(int $brandId, int $modelId, ?int $year, array $overr
         'first_seen_at' => now(),
         'last_seen_at' => now(),
         'missing_runs' => 0,
-    ), $overrides));
+    ], $overrides));
 }
 
 it('creates statistics with correct median/mean/percentiles when sample size meets the minimum', function () {
     // 100M dan 190M gacha, 10M qadam bilan — 10 ta baravar taqsimlangan qiymat.
-    $amounts = array(100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000);
+    $amounts = [100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000];
 
     foreach ($amounts as $amount) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2021, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2021, [
             'price_amount' => $amount,
             'price_uzs' => $amount,
-        ));
+        ]);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2021);
@@ -84,10 +83,10 @@ it('creates statistics with correct median/mean/percentiles when sample size mee
 it('returns null and does not create statistics when sample size is below the minimum', function () {
     // Faqat 5 ta — MIN_SAMPLE_SIZE (10) dan kam.
     for ($i = 0; $i < 5; $i++) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2022, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2022, [
             'price_amount' => 100_000_000,
             'price_uzs' => 100_000_000,
-        ));
+        ]);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2022);
@@ -97,13 +96,13 @@ it('returns null and does not create statistics when sample size is below the mi
 });
 
 it('deletes a previously created statistic when the sample later drops below the minimum', function () {
-    $listings = array();
+    $listings = [];
 
     for ($i = 0; $i < 10; $i++) {
-        $listings[] = makeMatchedListing($this->brand->id, $this->model->id, 2023, array(
+        $listings[] = makeMatchedListing($this->brand->id, $this->model->id, 2023, [
             'price_amount' => 100_000_000,
             'price_uzs' => 100_000_000,
-        ));
+        ]);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2023);
@@ -111,7 +110,7 @@ it('deletes a previously created statistic when the sample later drops below the
 
     // 5 tasini "inactive" qilamiz — endi faqat 5 ta faol qoladi, chegaradan kam.
     foreach (array_slice($listings, 0, 5) as $listing) {
-        $listing->update(array('status' => 'inactive'));
+        $listing->update(['status' => 'inactive']);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2023);
@@ -126,19 +125,19 @@ it('falls back to price_amount per-row when price_uzs is null for UZS listings (
     // Eski (xato) kod: agar HATTO BITTA yozuvda price_uzs bo'lsa, price_uzs'i
     // yo'q qolgan HAMMA boshqa yozuvlarni tashlab yuborardi.
     for ($i = 0; $i < 7; $i++) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2024, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2024, [
             'price_amount' => 120_000_000,
             'price_uzs' => null, // hali konvertatsiya qilinmagan, lekin UZS
             'currency' => 'UZS',
-        ));
+        ]);
     }
 
     for ($i = 0; $i < 3; $i++) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2024, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2024, [
             'price_amount' => 120_000_000,
             'price_uzs' => 120_000_000, // allaqachon konvertatsiya qilingan
             'currency' => 'UZS',
-        ));
+        ]);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2024);
@@ -151,21 +150,21 @@ it('falls back to price_amount per-row when price_uzs is null for UZS listings (
 
 it('does not count non-UZS listings whose price_uzs has not been converted yet', function () {
     for ($i = 0; $i < 9; $i++) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2025, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2025, [
             'price_amount' => 100_000_000,
             'price_uzs' => 100_000_000,
             'currency' => 'UZS',
-        ));
+        ]);
     }
 
     // Bitta USD yozuv, price_uzs hali NULL (konvertatsiya kutilmoqda) — bu
     // hisoblanmasligi kerak, chunki noaniq narx bilan statistikaga qo'shib
     // bo'lmaydi.
-    makeMatchedListing($this->brand->id, $this->model->id, 2025, array(
+    makeMatchedListing($this->brand->id, $this->model->id, 2025, [
         'price_amount' => 9_000,
         'price_uzs' => null,
         'currency' => 'USD',
-    ));
+    ]);
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2025);
 
@@ -176,23 +175,23 @@ it('does not count non-UZS listings whose price_uzs has not been converted yet',
 
 it('excludes a clear outlier via IQR filtering once sample_size reaches the IQR threshold (TZ: 20)', function () {
     // 20 ta baravar taqsimlangan qiymat (100M dan 290M gacha, 10M qadam bilan).
-    $amounts = array();
+    $amounts = [];
     for ($i = 0; $i < 20; $i++) {
         $amounts[] = 100_000_000 + ($i * 10_000_000);
     }
 
     foreach ($amounts as $amount) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2026, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2026, [
             'price_amount' => $amount,
             'price_uzs' => $amount,
-        ));
+        ]);
     }
 
     // Aniq outlier — jami tanlanma 21 taga yetadi, ya'ni IQR chegarasi (20) ga yetadi/oshadi.
-    makeMatchedListing($this->brand->id, $this->model->id, 2026, array(
+    makeMatchedListing($this->brand->id, $this->model->id, 2026, [
         'price_amount' => 900_000_000,
         'price_uzs' => 900_000_000,
-    ));
+    ]);
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2026);
 
@@ -205,19 +204,19 @@ it('excludes a clear outlier via IQR filtering once sample_size reaches the IQR 
 
 it('does NOT apply IQR when sample_size is below the IQR threshold — only global bounds apply (TZ 11-bo\'lim, 4-bosqich)', function () {
     // 10 ta oddiy narx + 1 ta juda katta narx — jami 11 ta, IQR chegarasi (20) dan kam.
-    $amounts = array(100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000);
+    $amounts = [100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000];
 
     foreach ($amounts as $amount) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2027, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2027, [
             'price_amount' => $amount,
             'price_uzs' => $amount,
-        ));
+        ]);
     }
 
-    makeMatchedListing($this->brand->id, $this->model->id, 2027, array(
+    makeMatchedListing($this->brand->id, $this->model->id, 2027, [
         'price_amount' => 900_000_000,
         'price_uzs' => 900_000_000,
-    ));
+    ]);
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2027);
 
@@ -230,26 +229,26 @@ it('does NOT apply IQR when sample_size is below the IQR threshold — only glob
 });
 
 it('excludes prices outside the configured global bounds regardless of sample size (TZ 11-bo\'lim, 1-2-bosqich)', function () {
-    $amounts = array(100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000);
+    $amounts = [100_000_000, 110_000_000, 120_000_000, 130_000_000, 140_000_000, 150_000_000, 160_000_000, 170_000_000, 180_000_000, 190_000_000];
 
     foreach ($amounts as $amount) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2028, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2028, [
             'price_amount' => $amount,
             'price_uzs' => $amount,
-        ));
+        ]);
     }
 
     // "Aniq to'liqsiz" narx — global minimumdan (standart 3M so'm) past.
-    makeMatchedListing($this->brand->id, $this->model->id, 2028, array(
+    makeMatchedListing($this->brand->id, $this->model->id, 2028, [
         'price_amount' => 500_000,
         'price_uzs' => 500_000,
-    ));
+    ]);
 
     // Realistik bo'lmagan haddan tashqari katta narx — global maksimumdan (standart 2B so'm) yuqori.
-    makeMatchedListing($this->brand->id, $this->model->id, 2028, array(
+    makeMatchedListing($this->brand->id, $this->model->id, 2028, [
         'price_amount' => 3_000_000_000,
         'price_uzs' => 3_000_000_000,
-    ));
+    ]);
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2028);
 
@@ -264,10 +263,10 @@ it('excludes prices outside the configured global bounds regardless of sample si
 
 it('counts available listings regardless of price validity', function () {
     for ($i = 0; $i < 4; $i++) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2020, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2020, [
             'price_amount' => 100_000_000,
             'price_uzs' => null,
-        ));
+        ]);
     }
 
     $count = $this->service->countAvailableListings($this->brand->id, $this->model->id, 2020);
@@ -278,21 +277,21 @@ it('counts available listings regardless of price validity', function () {
 it('excludes NEW-condition listings from the secondary-market sample (TZ 11-bo\'lim)', function () {
     // 9 ta haqiqiy "used" e'lon.
     for ($i = 0; $i < 9; $i++) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2019, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2019, [
             'price_amount' => 100_000_000,
             'price_uzs' => 100_000_000,
             'condition' => 'used',
-        ));
+        ]);
     }
 
     // 5 ta YANGI ('new') mashina — ular official_offers'ga tegishli va
     // ikkilamchi bozor medianasiga umuman kirmasligi kerak.
     for ($i = 0; $i < 5; $i++) {
-        makeMatchedListing($this->brand->id, $this->model->id, 2019, array(
+        makeMatchedListing($this->brand->id, $this->model->id, 2019, [
             'price_amount' => 200_000_000,
             'price_uzs' => 200_000_000,
             'condition' => 'new',
-        ));
+        ]);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2019);
@@ -308,13 +307,13 @@ it('excludes NEW-condition listings from the secondary-market sample (TZ 11-bo\'
 
 it('excludes listings older than the freshness window (72h) from the sample (TZ 11-bo\'lim)', function () {
     // 10 ta yangi (last_seen_at = now) "used" e'lon — normalda statistika chiqishi kerak.
-    $listings = array();
+    $listings = [];
     for ($i = 0; $i < 10; $i++) {
-        $listings[] = makeMatchedListing($this->brand->id, $this->model->id, 2018, array(
+        $listings[] = makeMatchedListing($this->brand->id, $this->model->id, 2018, [
             'price_amount' => 100_000_000,
             'price_uzs' => 100_000_000,
             'last_seen_at' => now(),
-        ));
+        ]);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2018);
@@ -326,7 +325,7 @@ it('excludes listings older than the freshness window (72h) from the sample (TZ 
     // statistikaga kirmasligi kerak. UPDATE...LIMIT ishlatmaymiz (Postgres
     // uni qo'llab-quvvatlamaydi) — aniq ID'lar bo'yicha yangilaymiz.
     foreach (array_slice($listings, 0, 3) as $listing) {
-        $listing->update(array('last_seen_at' => now()->subHours(80)));
+        $listing->update(['last_seen_at' => now()->subHours(80)]);
     }
 
     $stat = $this->service->recalculateGroup($this->brand->id, $this->model->id, 2018);

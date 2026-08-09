@@ -7,7 +7,6 @@ use App\Models\MarketListing;
 
 class FilterService
 {
-
     public function getFilters(?Brand $brand = null): array
     {
         $query = MarketListing::query()
@@ -35,9 +34,9 @@ class FilterService
             ->values()
             ->all();
 
-        return array(
+        return [
             'years' => $years,
             'regions' => $regions,
-        );
+        ];
     }
 }

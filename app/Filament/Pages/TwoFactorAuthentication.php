@@ -24,6 +24,16 @@ class TwoFactorAuthentication extends Page
 
     protected static ?string $navigationGroup = 'Sozlamalar';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Xavfsizlik (2FA)');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('Sozlamalar');
+    }
+
     protected static ?string $title = 'Ikki bosqichli autentifikatsiya';
 
     protected static ?string $slug = 'two-factor-authentication';

@@ -8,7 +8,9 @@ use Symfony\Component\DomCrawler\Crawler;
 class DiscoverOlxCatalogAdapter
 {
     private const BASE_URL = 'https://www.olx.uz';
+
     private const CATEGORY_PATH = '/transport/legkovye-avtomobili/';
+
     private const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
     private const EXCLUDED_BRAND_NAME_KEYWORDS = ['область', 'каракалпакстан', 'другие'];
@@ -18,13 +20,13 @@ class DiscoverOlxCatalogAdapter
      */
     public function discoverBrands(): array
     {
-        $html = $this->fetch(self::BASE_URL . self::CATEGORY_PATH);
+        $html = $this->fetch(self::BASE_URL.self::CATEGORY_PATH);
         $crawler = new Crawler($html);
 
-        $brands = array();
-        $seenSlugs = array();
+        $brands = [];
+        $seenSlugs = [];
 
-        $crawler->filter('a[href*="' . self::CATEGORY_PATH . '"]')->each(function (Crawler $node) use (&$brands, &$seenSlugs) {
+        $crawler->filter('a[href*="'.self::CATEGORY_PATH.'"]')->each(function (Crawler $node) use (&$brands, &$seenSlugs) {
             $href = $node->attr('href');
             $text = trim($node->text());
 
@@ -33,7 +35,7 @@ class DiscoverOlxCatalogAdapter
             }
 
             // Faqat BIR segmentli href'lar (marka darajasi): /transport/.../chevrolet/
-            if (! preg_match('#^' . preg_quote(self::CATEGORY_PATH, '#') . '([a-z0-9\-]+)/$#i', $href, $matches)) {
+            if (! preg_match('#^'.preg_quote(self::CATEGORY_PATH, '#').'([a-z0-9\-]+)/$#i', $href, $matches)) {
                 return;
             }
 
@@ -72,11 +74,11 @@ class DiscoverOlxCatalogAdapter
 
             $seenSlugs[$slug] = true;
 
-            $brands[] = array(
+            $brands[] = [
                 'name' => $name,
                 'slug' => $slug,
-                'url' => self::BASE_URL . $href,
-            );
+                'url' => self::BASE_URL.$href,
+            ];
         });
 
         return $brands;
@@ -87,14 +89,14 @@ class DiscoverOlxCatalogAdapter
      */
     public function discoverModels(string $brandSlug): array
     {
-        $brandPath = self::CATEGORY_PATH . $brandSlug . '/';
-        $html = $this->fetch(self::BASE_URL . $brandPath);
+        $brandPath = self::CATEGORY_PATH.$brandSlug.'/';
+        $html = $this->fetch(self::BASE_URL.$brandPath);
         $crawler = new Crawler($html);
 
-        $models = array();
-        $seenSlugs = array();
+        $models = [];
+        $seenSlugs = [];
 
-        $crawler->filter('a[href*="' . $brandPath . '"]')->each(function (Crawler $node) use (&$models, &$seenSlugs, $brandPath) {
+        $crawler->filter('a[href*="'.$brandPath.'"]')->each(function (Crawler $node) use (&$models, &$seenSlugs, $brandPath) {
             $href = $node->attr('href');
             $text = trim($node->text());
 
@@ -103,7 +105,7 @@ class DiscoverOlxCatalogAdapter
             }
 
             // Faqat ikki segmentli href: /transport/.../chevrolet/cobalt/
-            $pattern = '#^' . preg_quote($brandPath, '#') . '([a-z0-9\-]+)/$#i';
+            $pattern = '#^'.preg_quote($brandPath, '#').'([a-z0-9\-]+)/$#i';
 
             if (! preg_match($pattern, $href, $matches)) {
                 return;
@@ -126,11 +128,11 @@ class DiscoverOlxCatalogAdapter
 
             $seenSlugs[$slug] = true;
 
-            $models[] = array(
+            $models[] = [
                 'name' => $text,
                 'slug' => $slug,
-                'url' => self::BASE_URL . $href,
-            );
+                'url' => self::BASE_URL.$href,
+            ];
         });
 
         return $models;
@@ -138,16 +140,16 @@ class DiscoverOlxCatalogAdapter
 
     private function fetch(string $url): string
     {
-        $response = Http::withHeaders(array(
+        $response = Http::withHeaders([
             'User-Agent' => self::USER_AGENT,
-        ))->timeout(15)->get($url);
+        ])->timeout(15)->get($url);
 
         if ($response->status() === 403 || $response->status() === 429) {
-            throw new \RuntimeException('Manba bloklandi (HTTP ' . $response->status() . '). To\'xtatildi.');
+            throw new \RuntimeException('Manba bloklandi (HTTP '.$response->status().'). To\'xtatildi.');
         }
 
         if (! $response->successful()) {
-            throw new \RuntimeException('Sahifa yuklanmadi (HTTP ' . $response->status() . ').');
+            throw new \RuntimeException('Sahifa yuklanmadi (HTTP '.$response->status().').');
         }
 
         return preg_replace('#<style[^>]*>.*?</style>#si', '', $response->body());

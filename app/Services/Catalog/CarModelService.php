@@ -22,7 +22,7 @@ class CarModelService
         $query = $brand->carModels()->active()->orderBy('name');
 
         if ($year === null) {
-            $query->with(array('cheapestOfficialOffer', 'representativeMarketStatistic'));
+            $query->with(['cheapestOfficialOffer', 'representativeMarketStatistic']);
         }
 
         $models = $query->paginate($perPage);

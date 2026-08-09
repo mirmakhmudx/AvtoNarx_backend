@@ -2,7 +2,10 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\SourceResource\Pages;
+use App\Filament\Concerns\TranslatesLabels;
+use App\Filament\Resources\Pages\CreateSource;
+use App\Filament\Resources\Pages\EditSource;
+use App\Filament\Resources\Pages\ListSources;
 use App\Models\Source;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -13,6 +16,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class SourceResource extends Resource
 {
+    use TranslatesLabels;
+
     protected static ?string $model = Source::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-server-stack';
@@ -33,40 +38,40 @@ class SourceResource extends Resource
                     ->columns(2)
                     ->schema([
                         Forms\Components\TextInput::make('code')
-                            ->label('Kod')
-                            ->helperText('Masalan: olx_uz — parser shu kod orqali murojaat qiladi')
+                            ->label(__('Kod'))
+                            ->helperText(__('Masalan: olx_uz — parser shu kod orqali murojaat qiladi'))
                             ->required()
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
                             ->disabledOn('edit'),
 
                         Forms\Components\TextInput::make('name')
-                            ->label('Nomi')
+                            ->label(__('Nomi'))
                             ->required()
                             ->maxLength(120),
 
                         Forms\Components\Select::make('type')
-                            ->label('Turi')
+                            ->label(__('Turi'))
                             ->options([
                                 'marketplace' => 'Marketplace',
-                                'manufacturer' => 'Ishlab chiqaruvchi',
-                                'dealer' => 'Diler',
+                                'manufacturer' => __('Ishlab chiqaruvchi'),
+                                'dealer' => __('Diler'),
                                 'manual' => 'Qo\'lda kiritilgan',
                             ])
                             ->required(),
 
                         Forms\Components\Select::make('trust_level')
-                            ->label('Ishonch darajasi')
+                            ->label(__('Ishonch darajasi'))
                             ->options([
-                                'official' => 'Rasmiy',
-                                'verified' => 'Tasdiqlangan',
-                                'unverified' => 'Tasdiqlanmagan',
+                                'official' => __('Rasmiy'),
+                                'verified' => __('Tasdiqlangan'),
+                                'unverified' => __('Tasdiqlanmagan'),
                             ])
                             ->default('unverified')
                             ->required(),
 
                         Forms\Components\TextInput::make('base_url')
-                            ->label('Asosiy URL')
+                            ->label(__('Asosiy URL'))
                             ->url()
                             ->required()
                             ->maxLength(500)
@@ -77,28 +82,28 @@ class SourceResource extends Resource
                     ->columns(2)
                     ->schema([
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Faol')
-                            ->helperText('O\'chirilsa, manba butunlay ko\'rsatilmaydi')
+                            ->label(__('Faol'))
+                            ->helperText(__('O\'chirilsa, manba butunlay ko\'rsatilmaydi'))
                             ->default(true),
 
                         Forms\Components\Toggle::make('ingestion_enabled')
-                            ->label('Avtomatik yig\'ish yoqilgan')
-                            ->helperText('Diqqat: faqat ruxsat/kelishuv tasdiqlangandan keyin yoqing')
+                            ->label(__('Avtomatik yig\'ish yoqilgan'))
+                            ->helperText(__('Diqqat: faqat ruxsat/kelishuv tasdiqlangandan keyin yoqing'))
                             ->default(false),
 
                         Forms\Components\DateTimePicker::make('blocked_until')
-                            ->label('Shu vaqtgacha bloklangan')
-                            ->helperText('403/429/CAPTCHA sabab avtomatik to\'ldiriladi — qo\'lda ham o\'zgartirish mumkin')
+                            ->label(__('Shu vaqtgacha bloklangan'))
+                            ->helperText(__('403/429/CAPTCHA sabab avtomatik to\'ldiriladi — qo\'lda ham o\'zgartirish mumkin'))
                             ->columnSpanFull(),
                     ]),
 
                 Forms\Components\Section::make('Qo\'shimcha sozlamalar')
                     ->schema([
                         Forms\Components\KeyValue::make('settings')
-                            ->label('Sozlamalar (JSON)')
+                            ->label(__('Sozlamalar (JSON)'))
                             ->keyLabel('Kalit')
                             ->valueLabel('Qiymat')
-                            ->helperText('Masalan: requests_per_minute, max_pages'),
+                            ->helperText(__('Masalan: requests_per_minute, max_pages')),
                     ])
                     ->collapsible(),
             ]);
@@ -109,17 +114,17 @@ class SourceResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Kod')
+                    ->label(__('Kod'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nomi')
+                    ->label(__('Nomi'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Turi')
+                    ->label(__('Turi'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'marketplace' => 'info',
@@ -129,7 +134,7 @@ class SourceResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('trust_level')
-                    ->label('Ishonch')
+                    ->label(__('Ishonch'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'official' => 'success',
@@ -138,40 +143,40 @@ class SourceResource extends Resource
                     }),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Faol')
+                    ->label(__('Faol'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('ingestion_enabled')
-                    ->label('Yig\'ish yoqilgan')
+                    ->label(__('Yig\'ish yoqilgan'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('blocked_until')
-                    ->label('Bloklangan')
+                    ->label(__('Bloklangan'))
                     ->dateTime('d.m.Y H:i')
-                    ->placeholder('—')
+                    ->placeholder(__('—'))
                     ->color(fn ($state) => $state && $state->isFuture() ? 'danger' : null),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Yangilangan')
+                    ->label(__('Yangilangan'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
-                    ->label('Turi')
+                    ->label(__('Turi'))
                     ->options([
                         'marketplace' => 'Marketplace',
-                        'manufacturer' => 'Ishlab chiqaruvchi',
-                        'dealer' => 'Diler',
+                        'manufacturer' => __('Ishlab chiqaruvchi'),
+                        'dealer' => __('Diler'),
                         'manual' => 'Qo\'lda kiritilgan',
                     ]),
 
                 Tables\Filters\TernaryFilter::make('ingestion_enabled')
-                    ->label('Avtomatik yig\'ish'),
+                    ->label(__('Avtomatik yig\'ish')),
 
                 Tables\Filters\Filter::make('blocked')
-                    ->label('Hozir bloklangan')
+                    ->label(__('Hozir bloklangan'))
                     ->query(fn (Builder $query): Builder => $query->where('blocked_until', '>', now())),
             ])
             ->actions([
@@ -183,9 +188,9 @@ class SourceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => \App\Filament\Resources\Pages\ListSources::route('/'),
-            'create' => \App\Filament\Resources\Pages\CreateSource::route('/create'),
-            'edit' => \App\Filament\Resources\Pages\EditSource::route('/{record}/edit'),
+            'index' => ListSources::route('/'),
+            'create' => CreateSource::route('/create'),
+            'edit' => EditSource::route('/{record}/edit'),
         ];
     }
 }

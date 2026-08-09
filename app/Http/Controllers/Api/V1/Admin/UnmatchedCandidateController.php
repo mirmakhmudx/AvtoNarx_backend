@@ -16,8 +16,7 @@ class UnmatchedCandidateController extends Controller
 {
     public function __construct(
         private readonly UnmatchedCandidateService $candidateService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -34,9 +33,9 @@ class UnmatchedCandidateController extends Controller
     {
         $this->authorize('viewAny', UnmatchedBrandModelCandidate::class);
 
-        return response()->json(array(
+        return response()->json([
             'brands' => $this->candidateService->pendingCountsByBrand(),
-        ));
+        ]);
     }
 
     public function resolve(ResolveCandidateRequest $request, UnmatchedBrandModelCandidate $unmatchedCandidate): JsonResponse
@@ -53,10 +52,10 @@ class UnmatchedCandidateController extends Controller
             $data['production_from'] ?? null,
         );
 
-        return response()->json(array(
+        return response()->json([
             'message' => 'Model yaratildi va parser target faollashtirildi.',
             'car_model_id' => $carModel->id,
-        ));
+        ]);
     }
 
     public function ignore(UnmatchedBrandModelCandidate $unmatchedCandidate): JsonResponse
@@ -65,7 +64,7 @@ class UnmatchedCandidateController extends Controller
 
         $this->candidateService->ignore($unmatchedCandidate);
 
-        return response()->json(array('message' => 'Candidate e\'tiborsiz qoldirildi.'));
+        return response()->json(['message' => 'Candidate e\'tiborsiz qoldirildi.']);
     }
 
     public function bulkIgnore(BulkIgnoreCandidatesRequest $request): JsonResponse
@@ -74,10 +73,10 @@ class UnmatchedCandidateController extends Controller
 
         $count = $this->candidateService->bulkIgnore($request->validated()['ids']);
 
-        return response()->json(array(
-            'message' => $count . ' ta candidate e\'tiborsiz qoldirildi.',
+        return response()->json([
+            'message' => $count.' ta candidate e\'tiborsiz qoldirildi.',
             'count' => $count,
-        ));
+        ]);
     }
 
     public function ignoreAllPending(Request $request): JsonResponse
@@ -88,9 +87,9 @@ class UnmatchedCandidateController extends Controller
 
         $count = $this->candidateService->ignoreAllPending($brandFilter);
 
-        return response()->json(array(
-            'message' => $count . ' ta candidate e\'tiborsiz qoldirildi.',
+        return response()->json([
+            'message' => $count.' ta candidate e\'tiborsiz qoldirildi.',
             'count' => $count,
-        ));
+        ]);
     }
 }

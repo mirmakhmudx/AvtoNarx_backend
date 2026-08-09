@@ -14,8 +14,7 @@ class FilterController extends Controller
     public function __construct(
         private readonly FilterService $filterService,
         private readonly ApiCacheService $apiCache,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -26,22 +25,22 @@ class FilterController extends Controller
             $brand = Brand::query()->active()->where('slug', $brandSlug)->first();
 
             if ($brand === null) {
-                return response()->json(array('message' => 'Marka topilmadi.'), 404);
+                return response()->json(['message' => 'Marka topilmadi.'], 404);
             }
         }
 
-        $cacheKey = 'public:v1:filters:brand:' . ($brandSlug ?? 'all');
+        $cacheKey = 'public:v1:filters:brand:'.($brandSlug ?? 'all');
 
         return $this->apiCache->respond($cacheKey, $request, function () use ($brand) {
             $filters = $this->filterService->getFilters($brand);
 
-            return array(
-                'data' => array(
-                    'brand' => $brand ? array('id' => $brand->id, 'slug' => $brand->slug, 'name' => $brand->name) : null,
+            return [
+                'data' => [
+                    'brand' => $brand ? ['id' => $brand->id, 'slug' => $brand->slug, 'name' => $brand->name] : null,
                     'years' => $filters['years'],
                     'regions' => $filters['regions'],
-                ),
-            );
+                ],
+            ];
         });
     }
 }

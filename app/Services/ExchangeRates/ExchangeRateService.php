@@ -41,21 +41,21 @@ class ExchangeRateService
             return null;
         }
 
-        return (int)round($amount * (float)$rate->rate);
+        return (int) round($amount * (float) $rate->rate);
     }
 
     public function setRate(string $baseCurrency, string $quoteCurrency, float $rate, string $date, ?string $source = null): ExchangeRate
     {
         return ExchangeRate::updateOrCreate(
-            array(
+            [
                 'base_currency' => $baseCurrency,
                 'quote_currency' => $quoteCurrency,
                 'rate_date' => $date,
-            ),
-            array(
+            ],
+            [
                 'rate' => $rate,
                 'source' => $source,
-            )
+            ]
         );
     }
 }

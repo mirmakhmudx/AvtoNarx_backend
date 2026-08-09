@@ -1,6 +1,6 @@
 <?php
- 
-return array(
+
+return [
     /*
     |--------------------------------------------------------------------------
     | Narxning global chegaralari (TZ 11-bo'lim, 1-bosqich)
@@ -15,7 +15,7 @@ return array(
     */
     'global_min_price_uzs' => (int) env('MARKET_STATS_GLOBAL_MIN_PRICE_UZS', 3_000_000),
     'global_max_price_uzs' => (int) env('MARKET_STATS_GLOBAL_MAX_PRICE_UZS', 2_000_000_000),
- 
+
     /*
     |--------------------------------------------------------------------------
     | IQR uchun minimal tanlanma hajmi (TZ 11-bo'lim, 3-4-bosqich)
@@ -28,7 +28,7 @@ return array(
     |
     */
     'iqr_min_sample_size' => (int) env('MARKET_STATS_IQR_MIN_SAMPLE_SIZE', 20),
- 
+
     /*
     |--------------------------------------------------------------------------
     | Nashr etish uchun minimal tanlanma (TZ 11-bo'lim, "Natija")
@@ -38,7 +38,7 @@ return array(
     |
     */
     'min_sample_size' => (int) env('MARKET_STATS_MIN_SAMPLE_SIZE', 10),
- 
+
     /*
     |--------------------------------------------------------------------------
     | Tanlanmaning maksimal "eskirish" oynasi (TZ 11-bo'lim)
@@ -52,7 +52,7 @@ return array(
     |
     */
     'sample_max_age_hours' => (int) env('MARKET_STATS_SAMPLE_MAX_AGE_HOURS', 72),
- 
+
     /*
     |--------------------------------------------------------------------------
     | Statistikaga kiradigan condition qiymatlari (TZ 11-bo'lim)
@@ -74,4 +74,4 @@ return array(
         'trim',
         explode(',', (string) env('MARKET_STATS_INCLUDED_CONDITIONS', 'used,unknown')),
     ))),
-);
+];

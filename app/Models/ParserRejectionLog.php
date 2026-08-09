@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ParserRejectionLog extends Model
 {
-    protected $fillable = array(
+    protected $fillable = [
         'source_id',
         'external_id',
         'canonical_url',
@@ -19,12 +19,12 @@ class ParserRejectionLog extends Model
         'code',
         'message',
         'rejected_at',
-    );
+    ];
 
-    protected $casts = array(
+    protected $casts = [
         'price_amount' => 'integer',
         'rejected_at' => 'datetime',
-    );
+    ];
 
     public function source(): BelongsTo
     {

@@ -2,6 +2,8 @@
 
 use App\DTO\ListingData;
 use App\Exceptions\SuspiciousListingRejectedException;
+use App\Models\MarketListing;
+use App\Models\Source;
 use App\Services\MarketListings\ListingIngestionService;
 use App\Services\Parser\Extraction\ContentHashBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -9,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->source = \App\Models\Source::create(array(
+    $this->source = Source::create([
         'code' => 'olx_uz',
         'name' => 'OLX.uz',
         'type' => 'marketplace',
@@ -17,16 +19,16 @@ beforeEach(function () {
         'is_active' => true,
         'ingestion_enabled' => true,
         'trust_level' => 'unverified',
-        'settings' => array(),
-    ));
+        'settings' => [],
+    ]);
     $this->service = app(ListingIngestionService::class);
 });
 
 it('uses the parser-provided content_hash (ContentHashBuilder) instead of recomputing (TZ 19)', function () {
-    $builder = new ContentHashBuilder();
+    $builder = new ContentHashBuilder;
     $hash = $builder->build('olx_uz', 'ext-1', 'https://www.olx.uz/x', 'Chevrolet', 'Cobalt', 2021, 145000000, 'UZS', 'used');
 
-    $listing = $this->service->ingest(ListingData::fromArray(array(
+    $listing = $this->service->ingest(ListingData::fromArray([
         'source_id' => $this->source->id,
         'external_id' => 'ext-1',
         'canonical_url' => 'https://www.olx.uz/x',
@@ -37,14 +39,14 @@ it('uses the parser-provided content_hash (ContentHashBuilder) instead of recomp
         'currency' => 'UZS',
         'condition' => 'used',
         'content_hash' => $hash,
-    )));
+    ]));
 
     expect($listing->content_hash)->toBe($hash);
 });
 
 it('rejects a non-UZS listing when no exchange rate exists (currency_conversion_failed)', function () {
     try {
-        $this->service->ingest(ListingData::fromArray(array(
+        $this->service->ingest(ListingData::fromArray([
             'source_id' => $this->source->id,
             'external_id' => 'usd-1',
             'canonical_url' => 'https://www.olx.uz/usd',
@@ -55,12 +57,12 @@ it('rejects a non-UZS listing when no exchange rate exists (currency_conversion_
             'currency' => 'USD',
             'condition' => 'used',
             'content_hash' => str_repeat('a', 64),
-        )));
+        ]));
 
         $this->fail('SuspiciousListingRejectedException kutilgan edi, tashlanmadi.');
     } catch (SuspiciousListingRejectedException $e) {
         expect($e->errorCode())->toBe('currency_conversion_failed');
     }
 
-    expect(\App\Models\MarketListing::count())->toBe(0);
+    expect(MarketListing::count())->toBe(0);
 });
