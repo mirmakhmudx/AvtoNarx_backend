@@ -85,7 +85,6 @@ class StatsOverviewWidget extends BaseWidget
             ->all();
     }
 
-
     private function trend(int $today, int $yesterday): array
     {
         if ($yesterday === 0) {
