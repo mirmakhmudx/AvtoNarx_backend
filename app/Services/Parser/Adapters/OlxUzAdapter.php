@@ -113,11 +113,6 @@ class OlxUzAdapter
             }
         }
 
-        // YIL TO'LDIRISH BOSQICHI: kartochkada yil topilmagan, lekin
-        // QABUL QILINGAN elementlar uchun — e'lonning TO'LIQ sahifasiga
-        // alohida kirib, aniq "Год выпуска: XXXX" ni olamiz. Faqat
-        // ZARUR bo'lganda (yil hali yo'q bo'lsa) qilinadi, shuning uchun
-        // qo'shimcha so'rovlar soni cheklangan (odatda ~10 tagacha).
         foreach ($allResults as $i => $r) {
             if ($r['item'] !== null && $r['item']['year'] === null) {
                 sleep(self::DETAIL_PAGE_REQUEST_DELAY_SECONDS);
@@ -268,16 +263,6 @@ class OlxUzAdapter
         return null;
     }
 
-    /**
-     * Kartochkada yil topilmagan hollar uchun ZAXIRA usul: e'lonning
-     * TO'LIQ sahifasiga alohida so'rov yuborib, u yerdagi rasmiy
-     * "Год выпуска: XXXX" parametridan aniq yilni o'qiydi. Bu — eng
-     * ISHONCHLI manba, chunki bu sotuvchi to'ldirgan rasmiy forma maydoni,
-     * sarlavha yoki qidiruv natijasidagi taxminiy matn emas.
-     *
-     * Xato/timeout bo'lsa jimgina null qaytaradi — bitta e'lonning yili
-     * topilmasa ham, butun jarayonni to'xtatishga arzimaydi.
-     */
     private function fetchYearFromDetailPage(string $url): ?int
     {
         try {
@@ -292,9 +277,6 @@ class OlxUzAdapter
             return null;
         }
 
-        // OLX'da bu maydon "Год выпуска: 2020" formatida, alohida
-        // "belgi" (chip) sifatida chiqadi (rasmga qarang — Toyota Avalon
-        // misolida ham xuddi shunday edi).
         if (preg_match('/Год\s+выпуска[:\s]*(\d{4})/u', $response->body(), $matches)) {
             $year = (int) $matches[1];
 
@@ -348,10 +330,6 @@ class OlxUzAdapter
         $locationText = $locationNode->count() > 0 ? trim($locationNode->text()) : null;
         $region = $this->extractRegion($locationText);
 
-        // Yil: avval sarlavhadan, keyin kartochka matnidagi "YIL - PROBEG"
-        // naqshidan. Bu yerda ham topilmasa — null qoladi, va
-        // extractFromTarget() darajasida (yuqorida) detail sahifadan
-        // ZAXIRA sifatida olinishga urinilib ko'riladi.
         $year = $this->yearExtractor->extract($titleText) ?? $this->extractYearFromCardText($card->text());
 
         $brandRaw = $target->brand->name;

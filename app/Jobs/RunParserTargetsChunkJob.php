@@ -116,10 +116,6 @@ class RunParserTargetsChunkJob implements ShouldQueue
                 if ($result['item'] === null) {
                     $rejectedCount++;
 
-                    // Asl sarlavha VA havola — shu ikkalasi bo'lsa, admin
-                    // panelda "nega bu rad etildi?" savoliga to'liq javob
-                    // topiladi: matnni o'qish VA havolani bosib, haqiqiy
-                    // e'lonni ko'rish mumkin.
                     $titleRaw = $result['title_raw'] ?? null;
                     $canonicalUrl = $result['canonical_url'] ?? null;
 
