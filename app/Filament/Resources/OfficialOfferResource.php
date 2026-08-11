@@ -25,11 +25,11 @@ class OfficialOfferResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Rasmiy takliflar';
+    protected static ?string $navigationLabel = 'Rasmiy narx';
 
-    protected static ?string $modelLabel = 'rasmiy taklif';
+    protected static ?string $modelLabel = 'rasmiy narx';
 
-    protected static ?string $pluralModelLabel = 'Rasmiy takliflar';
+    protected static ?string $pluralModelLabel = 'Rasmiy narx';
 
     protected static ?int $navigationSort = 7;
 
@@ -52,19 +52,6 @@ class OfficialOfferResource extends Resource
                 Forms\Components\Section::make('Taklif ma\'lumoti')
                     ->columns(2)
                     ->schema([
-                        Forms\Components\Select::make('source_id')
-                            ->label(__('Manba'))
-                            ->relationship('source', 'name')
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-
-                        Forms\Components\TextInput::make('source_url')
-                            ->label(__('Manba havolasi'))
-                            ->url()
-                            ->required()
-                            ->maxLength(1000),
-
                         Forms\Components\Select::make('brand_id')
                             ->label(__('Marka'))
                             ->options(fn () => Brand::orderBy('name')->pluck('name', 'id'))
@@ -212,8 +199,7 @@ class OfficialOfferResource extends Resource
                         'published' => __('Nashr qilingan'),
                         'rejected' => __('Rad etilgan'),
                         'expired' => __('Muddati tugagan'),
-                    ])
-                    ->default('pending'),
+                    ]),
 
                 Tables\Filters\SelectFilter::make('source_id')
                     ->label(__('Manba'))

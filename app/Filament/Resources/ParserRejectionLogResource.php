@@ -18,6 +18,8 @@ use Filament\Tables\Table;
  */
 class ParserRejectionLogResource extends Resource
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     use TranslatesLabels;
 
     protected static ?string $model = ParserRejectionLog::class;

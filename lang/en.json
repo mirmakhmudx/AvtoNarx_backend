@@ -190,5 +190,20 @@
     "Ikkalasi ham": "Both",
     "Faqat bozor": "Market only",
     "Faqat salon": "Dealer only",
-    "Kechaga nisbatan :change%": "vs yesterday :change%"
+    "Kechaga nisbatan :change%": "vs yesterday :change%",
+    "Ikki bosqichli autentifikatsiya o'chiq": "Two-factor authentication is off",
+    "Hisobingizni parolga qo'shimcha ravishda telefoningizdagi autentifikator ilovasi (Google Authenticator, 1Password va h.k.) bilan himoyalang.": "Protect your account in addition to your password with an authenticator app (Google Authenticator, 1Password, etc.).",
+    "2FA'ni yoqish": "Enable 2FA",
+    "QR kodni skaner qiling": "Scan the QR code",
+    "Quyidagi QR kodni autentifikator ilovangizda skaner qiling, so'ng ilovadagi 6 xonali kodni kiriting.": "Scan the QR code in your authenticator app, then enter the 6-digit code from the app.",
+    "Tasdiqlash": "Confirm",
+    "Bekor qilish": "Cancel",
+    "Recovery (tiklash) kodlari": "Recovery codes",
+    "Telefoningizni yo'qotsangiz, quyidagi kodlar bilan kira olasiz. Ularni xavfsiz joyda saqlang.": "If you lose your phone, you can log in with these codes. Keep them in a safe place.",
+    "Ikki bosqichli autentifikatsiya yoqilgan": "Two-factor authentication is on",
+    "Hisobingiz 2FA bilan himoyalangan.": "Your account is protected with 2FA.",
+    "Recovery kodlarni yangilash": "Regenerate recovery codes",
+    "2FA'ni o'chirish": "Disable 2FA",
+    "Rasmiy narx": "Official price",
+    "rasmiy narx": "official price"
 }

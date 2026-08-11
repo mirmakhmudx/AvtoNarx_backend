@@ -36,6 +36,11 @@ class TwoFactorAuthentication extends Page
 
     protected static ?string $title = 'Ikki bosqichli autentifikatsiya';
 
+    public function getTitle(): string
+    {
+        return __('Ikki bosqichli autentifikatsiya');
+    }
+
     protected static ?string $slug = 'two-factor-authentication';
 
     protected static string $view = 'filament.pages.two-factor-authentication';
@@ -47,7 +52,7 @@ class TwoFactorAuthentication extends Page
         $enable($this->getAccount());
 
         Notification::make()
-            ->title('2FA yoqildi. QR kodni ilovangizda skaner qilib, kodni tasdiqlang.')
+            ->title(__('2FA yoqildi. QR kodni ilovangizda skaner qilib, kodni tasdiqlang.'))
             ->success()
             ->send();
     }
@@ -58,7 +63,7 @@ class TwoFactorAuthentication extends Page
             $confirm($this->getAccount(), (string) $this->code);
         } catch (ValidationException $e) {
             Notification::make()
-                ->title('Kod noto\'g\'ri. Qayta urinib ko\'ring.')
+                ->title(__('Kod noto\'g\'ri. Qayta urinib ko\'ring.'))
                 ->danger()
                 ->send();
 
@@ -68,7 +73,7 @@ class TwoFactorAuthentication extends Page
         $this->code = null;
 
         Notification::make()
-            ->title('Ikki bosqichli autentifikatsiya tasdiqlandi.')
+            ->title(__('Ikki bosqichli autentifikatsiya tasdiqlandi.'))
             ->success()
             ->send();
     }
@@ -78,7 +83,7 @@ class TwoFactorAuthentication extends Page
         $generate($this->getAccount());
 
         Notification::make()
-            ->title('Yangi recovery kodlar yaratildi.')
+            ->title(__('Yangi recovery kodlar yaratildi.'))
             ->success()
             ->send();
     }
@@ -89,7 +94,7 @@ class TwoFactorAuthentication extends Page
         $this->code = null;
 
         Notification::make()
-            ->title('Ikki bosqichli autentifikatsiya o\'chirildi.')
+            ->title(__('Ikki bosqichli autentifikatsiya o\'chirildi.'))
             ->warning()
             ->send();
     }
