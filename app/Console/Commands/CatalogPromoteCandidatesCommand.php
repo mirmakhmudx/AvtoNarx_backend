@@ -15,7 +15,8 @@ use Illuminate\Support\Str;
 class CatalogPromoteCandidatesCommand extends Command
 {
     protected $signature = 'catalog:promote-candidates
-        {ids* : unmatched_brand_model_candidates.id qiymatlari (bir nechta, bo\'sh joy bilan)}
+        {ids?* : unmatched_brand_model_candidates.id qiymatlari (bir nechta, bo\'sh joy bilan)}
+        {--all : Barcha "pending" nomzodlarni promote qiladi}
         {--dry-run : Bazaga hech narsa yozmasdan, nima qilinishini ko\'rsatish}';
 
     protected $description = 'Tanlangan unmatched nomzodlarni haqiqiy katalogga aylantiradi: brand/model yaratadi, tasdiqlangan alias yozadi va parser_target ochadi';
@@ -24,14 +25,17 @@ class CatalogPromoteCandidatesCommand extends Command
 
     public function handle(): int
     {
-        $ids = collect($this->argument('ids'))->map(fn ($id) => (int) $id)->filter()->unique();
+        if ($this->option('all')) {
+            $ids = UnmatchedBrandModelCandidate::where('status', 'pending')->pluck('id')->map(fn ($id) => (int) $id);
+        } else {
+            $ids = collect($this->argument('ids'))->map(fn ($id) => (int) $id)->filter()->unique();
+        }
 
         if ($ids->isEmpty()) {
-            $this->error('Kamida bitta ID kiriting.');
+            $this->error('ID kiriting yoki --all bering.');
 
             return self::FAILURE;
         }
-
         $dryRun = (bool) $this->option('dry-run');
 
         if ($dryRun) {

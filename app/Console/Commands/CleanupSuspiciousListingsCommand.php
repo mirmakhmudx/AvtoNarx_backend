@@ -76,8 +76,7 @@ class CleanupSuspiciousListingsCommand extends Command
             });
 
         if (! $dryRun && ! empty($idsToDelete)) {
-            // cascadeOnDelete tufayli tegishli listing_price_snapshots ham
-            // avtomatik o'chadi.
+
             MarketListing::whereIn('id', $idsToDelete)->delete();
         }
 

@@ -5,7 +5,6 @@ on:
     branches: [main, develop, 'fix/**', 'feat/**']
   pull_request:
 
-# Bir branch uchun eski ishga tushishlarni bekor qilamiz (resurs tejash).
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -42,19 +41,16 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      # 2-qadam: kod stili
+
       - name: Code style (Pint)
         run: vendor/bin/pint --test
 
-      # 3-qadam: statik tahlil
       - name: Static analysis (PHPStan)
         run: composer analyse
 
-      # 4 + 5-qadam: testlar (OpenApiSpecTest OpenAPI validatsiyasini ham o'z ichiga oladi)
       - name: Tests (Pest)
         run: php artisan test
 
-      # Dependency xavfsizlik auditi (§16). Ma'lumot uchun — bloklamaydi.
       - name: Dependency security audit
         run: composer audit --no-interaction || true
 

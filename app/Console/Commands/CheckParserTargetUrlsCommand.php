@@ -81,7 +81,6 @@ class CheckParserTargetUrlsCommand extends Command
         $trimmed = trim($path, '/');
         $segments = $trimmed === '' ? [] : explode('/', $trimmed);
 
-        // Kutilgan: transport / legkovye-avtomobili / {brend} / {model}
         return count($segments) === 4;
     }
 }

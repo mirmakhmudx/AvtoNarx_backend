@@ -100,8 +100,7 @@ class UnmatchedBrandModelCandidateResource extends Resource
                         'pending' => __('Kutmoqda'),
                         'resolved' => __('Hal qilingan'),
                         'ignored' => 'E\'tiborsiz qoldirilgan',
-                    ])
-                    ->default('pending'),
+                    ]),
 
                 Tables\Filters\SelectFilter::make('brand_name_raw')
                     ->label(__('Marka'))
