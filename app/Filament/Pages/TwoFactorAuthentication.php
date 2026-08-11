@@ -11,11 +11,6 @@ use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 
-/**
- * TZ 16: admin panelida 2FA (TOTP) sozlash sahifasi — yoqish, QR kodni
- * skanerlab tasdiqlash, recovery kodlarni ko'rish/yangilash, o'chirish.
- * Fortify actionlaridan foydalanadi.
- */
 class TwoFactorAuthentication extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';

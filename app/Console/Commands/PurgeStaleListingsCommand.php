@@ -6,20 +6,6 @@ use App\Enums\ListingStatus;
 use App\Models\MarketListing;
 use Illuminate\Console\Command;
 
-/**
- * Bir martalik tozalash buyrug'i: ExpireStaleListingsJob e'lonlarni faqat
- * "inactive" deb belgilaydi (o'chirmaydi) — bu to'g'ri, chunki narx tarixi
- * (listing_price_snapshots) va statistikalar uchun so'nggi kuzatuvlar
- * saqlanib qolishi kerak. Lekin uzoq vaqt (masalan bir necha oy) davomida
- * bironta ham manba tomonidan qayta topilmagan yozuvlar — haqiqatan ham
- * eskirgan chiqindi bo'lib, bazani shishirib, so'rovlarni sekinlashtiradi.
- *
- * Bu buyruq shunday "juda eski" (--days'dan ko'proq) inactive/removed
- * yozuvlarni butunlay o'chiradi (cascadeOnDelete tufayli tegishli
- * snapshot'lar ham ketadi). Hozircha faol (active) yozuvlarga tegilmaydi —
- * ularning lifecycle'i ExpireStaleListingsJob va missing_runs orqali
- * boshqariladi.
- */
 class PurgeStaleListingsCommand extends Command
 {
     protected $signature = 'listings:purge-stale
@@ -67,8 +53,6 @@ class PurgeStaleListingsCommand extends Command
                 break;
             }
 
-            // cascadeOnDelete tufayli tegishli listing_price_snapshots ham
-            // avtomatik o'chadi.
             $count = MarketListing::whereIn('id', $ids)->delete();
             $deleted += $count;
             $bar->advance($count);

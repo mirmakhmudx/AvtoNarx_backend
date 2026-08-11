@@ -11,20 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-/**
- * TZ bo'lim 12 (Lifecycle):
- *  - Incremental: 72 soat kuzatuvsiz qolgandan keyin inactive bo'ladi.
- *  - Snapshot: ikkita muvaffaqiyatli to'liq snapshot'dan keyin (missing_runs,
- *    ListingIngestionService::markMissingForModel orqali) YOKI 72 soatdan
- *    keyin inactive bo'ladi.
- *
- * Bu job ikkala rejim uchun ham umumiy "xavfsizlik to'ri" (safety net)
- * vazifasini bajaradi: qaysi manba qanday rejimda ishlashidan qat'i nazar,
- * last_seen_at 72 soatdan eski bo'lgan har qanday active e'lonni inactive
- * qiladi. missing_runs mexanizmi (faqat snapshot manbalar uchun, masalan
- * OLX) buni ko'pincha oldinroq bajaradi, lekin manba butunlay to'xtab
- * qolsa yoki missing_runs hisoblanmasa ham, bu job baribir ishlaydi.
- */
+
 class ExpireStaleListingsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;

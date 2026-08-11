@@ -12,11 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
-/**
- * TZ §17: monitoring uchun Prometheus formatidagi metrikalar.
- * Barcha qiymatlar so'rov vaqtida bazadan hisoblanadi (gauge/counter).
- * Endpoint token bilan himoyalanadi (config/metrics.php).
- */
 class MetricsController extends Controller
 {
     /** @var array<string, bool> */
@@ -134,11 +129,7 @@ class MetricsController extends Controller
         $lines[] = "{$name}{$labelStr} {$value}";
     }
 
-    /**
-     * Bitta metrika xatosi butun endpointни buzmasligi uchun himoya.
-     *
-     * @param  callable():(int|string|null)  $callback
-     */
+
     private function safe(callable $callback): int
     {
         try {

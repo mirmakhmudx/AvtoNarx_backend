@@ -262,10 +262,7 @@ class IngestionController extends Controller
 
         $client = $request->user();
 
-        // TZ bo'lim 6: parser client faqat o'z batch'larini o'qishi mumkin.
-        // TZ bo'lim 14: administrator uchun "batch va xatolar"ni ko'rish —
-        // moderatsiya funksiyasi, shuning uchun administrator har qanday
-        // batch'ni ko'ra oladi.
+
         $isOwner = $client instanceof ParserClient && $batch->parser_client_id === $client->id;
         $isAdmin = $client instanceof User && $client->isAdministrator();
 

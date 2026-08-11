@@ -6,11 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Admin panel tilini sessiyadan o'rnatadi (uz/ru/en). Standart — o'zbekcha.
- * Filament o'zining UI tarjimalarini (tugmalar, jadval, modallar) shu locale
- * bo'yicha ko'rsatadi.
- */
+
 class SetLocale
 {
     public const SUPPORTED = ['uz', 'ru', 'en'];

@@ -6,20 +6,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\InputBag;
 
-/**
- * TZ 8.1 va parser TZ 15: parser katta (>64 KB) batch payloadlarni
- * "Content-Encoding: gzip" bilan yuboradi. Laravel/PHP so'rov tanasini
- * avtomatik ochmaydi, shuning uchun bu middleware gzip tanani ochib,
- * so'rovni ochilgan JSON bilan almashtiradi — shunda quyi qatlamlar
- * (FormRequest validatsiyasi, $request->json()) to'g'ri ma'lumot ko'radi.
- */
 class DecodeGzipRequest
 {
-    /**
-     * Ochilgan (decompressed) tananing maksimal ruxsat etilgan hajmi.
-     * gzip-bomba hujumlaridan himoya. TZ 8.1: batch payload <= 5 MB, shu sabab
-     * biroz zaxira bilan standart 12 MB. .env orqali sozlanadi.
-     */
+
     protected function maxDecodedBytes(): int
     {
         return (int) config('ingestion.max_decoded_bytes', 12 * 1024 * 1024);
@@ -36,7 +25,6 @@ class DecodeGzipRequest
         $raw = $request->getContent();
 
         if ($raw === '') {
-            // Bo'sh tana — ochishga hojat yo'q, faqat encoding sarlavhasini olib tashlaymiz.
             $request->headers->remove('Content-Encoding');
 
             return $next($request);
@@ -62,7 +50,6 @@ class DecodeGzipRequest
             ], 413);
         }
 
-        // So'rov tanasini ochilgan kontent bilan almashtiramiz.
         $request->initialize(
             $request->query->all(),
             $request->request->all(),
@@ -73,15 +60,11 @@ class DecodeGzipRequest
             $decoded,
         );
 
-        // initialize() sarlavhalarni server'dan qayta quradi — Content-Encoding
-        // yana paydo bo'lishi mumkin, shuning uchun uni qayta olib tashlaymiz va
-        // Content-Length'ni ochilgan hajmga moslaymiz.
+
         $request->headers->remove('Content-Encoding');
         $request->server->remove('HTTP_CONTENT_ENCODING');
         $request->headers->set('Content-Length', (string) strlen($decoded));
 
-        // JSON so'rov bo'lsa, json bag'ini ochilgan kontent bilan yangilaymiz —
-        // aks holda validatsiya eski (yoki bo'sh) keshdan o'qishi mumkin.
         if ($request->isJson()) {
             $parsed = json_decode($decoded, true);
 

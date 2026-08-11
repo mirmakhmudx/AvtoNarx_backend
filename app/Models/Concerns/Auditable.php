@@ -6,13 +6,6 @@ use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * TZ 14-bo'lim: bu trait ulangan model o'zgarsa (yaratildi/yangilandi/
- * o'chirildi), audit_logs'ga yozuv qo'shadi — LEKIN faqat harakat admin
- * (User) tomonidan bo'lsa. Ingestion/parser (ParserClient token) yoki anonim
- * yozuvlar audit qilinmaydi, aks holda jurnal avtomatik yozuvlar bilan to'lib
- * ketardi.
- */
 trait Auditable
 {
     public static function bootAuditable(): void

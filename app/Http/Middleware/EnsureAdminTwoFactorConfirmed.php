@@ -6,12 +6,7 @@ use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 
-/**
- * TZ 16: admin panelга kirish uchun tasdiqlangan 2FA talab qilinadi
- * (config('admin.mfa_required') yoqilganda). Tasdiqlanmagan administrator 2FA
- * sozlash sahifasiga yo'naltiriladi. Sozlash sahifasi va logout istisno —
- * aks holda qulflanib qolish yoki redirect loop bo'lardi.
- */
+
 class EnsureAdminTwoFactorConfirmed
 {
     public function handle(Request $request, Closure $next)

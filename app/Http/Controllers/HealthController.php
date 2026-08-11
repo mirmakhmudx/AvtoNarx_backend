@@ -7,16 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
-/**
- * TZ 20-bo'lim: sog'liq (health) endpointlari.
- *  - GET /up            — Laravel'ning standart liveness'i (bootstrap/app.php).
- *  - GET /health/live   — jarayon tirikmi (hech qanday tashqi bog'liqlikni tekshirmaydi).
- *  - GET /health/ready  — trafik qabul qilishga tayyormi (DB + cache/Redis tekshiriladi).
- *
- * Liveness va readiness'ni ajratish orkestrator (k8s/docker) uchun muhim:
- * readiness FAIL bo'lsa pod trafikdan chiqariladi, lekin liveness OK bo'lsa
- * qayta ishga tushirilmaydi (bog'liqlik tiklanishini kutadi).
- */
+
 class HealthController extends Controller
 {
     public function live(): JsonResponse

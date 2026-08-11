@@ -2,9 +2,6 @@
 
 namespace App\Filament\Concerns;
 
-/**
- * Resource'larning static navigatsiya/model nomlarini __() orqali tarjima qiladi.
- */
 trait TranslatesLabels
 {
     public static function getNavigationLabel(): string

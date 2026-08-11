@@ -7,16 +7,7 @@ use App\Models\ParserRejectionLog;
 use App\Services\MarketListings\ListingSanityChecker;
 use Illuminate\Console\Command;
 
-/**
- * Bir martalik (lekin xohlaganda qayta ishga tushiriladigan) tozalash
- * buyrug'i: hozirgi bazadagi market_listings ichidan ListingSanityChecker
- * bo'yicha shubhali (haqiqiy mashina emas) yozuvlarni topadi, ularni
- * parser_rejection_logs'ga yozib qo'yib (audit uchun), keyin o'chiradi.
- *
- * Kelajakda kirib kelayotgan yangi ma'lumotlar uchun himoya qatlami
- * ListingIngestionService'ning o'zida ishlaydi (bu buyruq faqat MAVJUD,
- * OLDIN yozib qo'yilgan chiqindini tozalash uchun).
- */
+
 class CleanupSuspiciousListingsCommand extends Command
 {
     protected $signature = 'listings:cleanup-suspicious
