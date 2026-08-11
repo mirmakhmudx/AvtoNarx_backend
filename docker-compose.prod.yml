@@ -1,0 +1,160 @@
+# Production compose — server (islam-hifz) uchun.
+#
+# Farqi docker-compose.yml (dev)dan:
+#   - Dockerfile.prod ishlatadi (kod va vendor image ichiga "baked" qilinadi;
+#     butun repo emas, faqat storage/, bootstrap/cache/ va public/ host'dan
+#     bog'lanadi — shuning uchun kod o'zgarsa deploy = qayta build kerak)
+#   - postgres/redis host portlariga chiqmaydi (faqat ichki tarmoq)
+#   - nginx faqat 127.0.0.1:18083 orqali ochiladi (FrankenPHP shu portga
+#     reverse_proxy qiladi — /etc/frankenphp/Caddyfile.d/avtonarx.caddyfile)
+#   - restart: unless-stopped va resurs chegaralari qo'shilgan
+#
+# MUHIM (birinchi marta ishga tushirishdan oldin, serverda):
+#   chown -R 1000:1000 storage bootstrap/cache
+#   (image ichidagi PHP-FPM "avtonarx" user, uid 1000 ostida ishlaydi —
+#    aks holda storage/logga yoza olmay xato beradi)
+#
+# Ishga tushirish:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile.prod
+    container_name: avtonarx_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - avtonarx
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 768M
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: avtonarx_nginx
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18083:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public:/var/www/html/public:ro
+    depends_on:
+      - app
+    networks:
+      - avtonarx
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: avtonarx_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-avtonarx}
+      POSTGRES_USER: ${DB_USERNAME:-avtonarx}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-avtonarx} -d ${DB_DATABASE:-avtonarx}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - avtonarx
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: avtonarx_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - avtonarx
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile.prod
+    container_name: avtonarx_queue
+    restart: unless-stopped
+    command: php artisan queue:work --tries=3 --backoff=5 --timeout=3600
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - avtonarx
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile.prod
+    container_name: avtonarx_scheduler
+    restart: unless-stopped
+    command: php artisan schedule:work
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - avtonarx
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+networks:
+  avtonarx:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redis_data:
