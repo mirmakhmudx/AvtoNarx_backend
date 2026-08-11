@@ -7,10 +7,7 @@ use App\Models\MarketPriceStatistic;
 use App\Models\OfficialOffer;
 use Filament\Widgets\ChartWidget;
 
-/**
- * Loyihaning asosiy g'oyasi bo'yicha qamrov: qaysi modellarda BOZOR narxi,
- * qaysida SALON narxi, qaysida IKKALASI bor.
- */
+
 class PriceCoverageChartWidget extends ChartWidget
 {
     use TranslatesWidgetLabels;

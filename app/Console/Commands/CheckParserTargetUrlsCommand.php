@@ -5,18 +5,7 @@ namespace App\Console\Commands;
 use App\Models\ParserTarget;
 use Illuminate\Console\Command;
 
-/**
- * Loglarda ko'ringan bag: ba'zi target'lar uchun target_url kutilgan
- * "/{brend-slug}/{model-slug}/" (ikki segment) shaklida emas, balki faqat
- * brend ildiziga ("/{brend-slug}/") ishora qiladi. Bu buyruq bazadagi
- * BARCHA faol target'larni tekshirib, shu shaklga mos kelmaydiganlarini
- * ro'yxatlaydi — shunda muammoning haqiqiy ko'lami (nechta target,
- * qaysi brendlar) ko'rinadi.
- *
- * Faqat o'qish uchun (hech narsani o'zgartirmaydi) — --deactivate
- * berilsa, topilgan noto'g'ri target'larni is_active=false qilib
- * qo'yadi, shunda ular tuzatilmaguncha bekorga so'rov yubormaydi.
- */
+
 class CheckParserTargetUrlsCommand extends Command
 {
     protected $signature = 'parser:check-target-urls
@@ -69,12 +58,6 @@ class CheckParserTargetUrlsCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * URL "/transport/legkovye-avtomobili/{brend}/{model}/" (ikki segment,
-     * kategoriya yo'lidan keyin) shaklidami — tekshiradi. Faqat bitta
-     * segment (brend ildizi) yoki undan ko'p (masalan viloyat filtri
-     * qo'shilgan) bo'lsa — noto'g'ri deb hisoblanadi.
-     */
     private function hasModelSegment(string $targetUrl): bool
     {
         $path = parse_url($targetUrl, PHP_URL_PATH) ?? '';

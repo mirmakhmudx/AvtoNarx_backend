@@ -7,11 +7,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-/**
- * TZ §15: ingestion yiqilganda ogohlantirish yuboradi. Kanallar (Slack, email)
- * ixtiyoriy — sozlanmagan bo'lsa jim o'tadi, faqat log yoziladi. Har bir kanal
- * xatosi qolganlarini buzmasligi uchun himoyalangan.
- */
 class IngestionAlertService
 {
     public function batchFailed(IngestionBatch $batch, string $reason): void

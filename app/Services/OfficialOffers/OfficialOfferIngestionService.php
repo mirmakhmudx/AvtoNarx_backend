@@ -9,17 +9,6 @@ use App\Models\OfficialOffer;
 use App\Models\Source;
 use App\Services\Catalog\CatalogAliasService;
 use App\Services\ExchangeRates\ExchangeRateService;
-
-/**
- * TZ bo'lim 8.3: parserdan kelgan rasmiy narx yozuvlarini qabul qiladi.
- *
- * market_listings'dan farqi: official_offers.brand_id/model_id NOT NULL
- * (migratsiyada nullable emas) — shuning uchun bu yerda "pending
- * normalization" degan holat yo'q. Agar brend yoki model bizning
- * katalogimizda topilmasa, item butunlay rad etiladi (unmatched_brand /
- * unmatched_model), listing'lardagidek "keyinroq admin bog'laydi" degan
- * yumshoq yo'l yo'q.
- */
 class OfficialOfferIngestionService
 {
     public function __construct(
@@ -75,9 +64,6 @@ class OfficialOfferIngestionService
         ];
 
         if ($priceUnchanged) {
-            // Narx o'zgarmagan — faqat "yana kuzatildi" faktini yozamiz,
-            // moderatsiya holatini qayta ochmaymiz (TZ: faqat YANGI yoki
-            // O'ZGARGAN narx pending bo'ladi).
             $existing->update([
                 'observed_at' => $data->observedAt,
                 'valid_from' => $data->validFrom,
@@ -86,10 +72,6 @@ class OfficialOfferIngestionService
 
             return $existing->refresh();
         }
-
-        // TZ bo'lim 8.3: "Avtomatik nashr etish faqat alohida ruxsatga ega
-        // manba uchun mumkin." Bu ruxsat sources.settings->auto_publish
-        // bayrog'i orqali beriladi (admin tomonidan qo'lda yoqiladi).
         $autoPublish = (bool) ($source->settings['auto_publish'] ?? false);
 
         if ($autoPublish) {

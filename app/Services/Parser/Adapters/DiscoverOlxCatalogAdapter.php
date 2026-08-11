@@ -15,9 +15,6 @@ class DiscoverOlxCatalogAdapter
 
     private const EXCLUDED_BRAND_NAME_KEYWORDS = ['область', 'каракалпакстан', 'другие'];
 
-    /**
-     * @return array<int, array{name: string, slug: string, url: string}>
-     */
     public function discoverBrands(): array
     {
         $html = $this->fetch(self::BASE_URL.self::CATEGORY_PATH);
@@ -41,9 +38,6 @@ class DiscoverOlxCatalogAdapter
 
             $slug = $matches[1];
 
-            // "q-bmw", "q-nexia-1" kabi — bular OLX qidiruv taklifi
-            // (autocomplete) vidjetidan, haqiqiy marka kategoriyasi emas.
-            // discoverModels()dagi bilan bir xil filtr.
             if (str_starts_with($slug, 'q-')) {
                 return;
             }
@@ -84,9 +78,6 @@ class DiscoverOlxCatalogAdapter
         return $brands;
     }
 
-    /**
-     * @return array<int, array{name: string, slug: string, url: string}>
-     */
     public function discoverModels(string $brandSlug): array
     {
         $brandPath = self::CATEGORY_PATH.$brandSlug.'/';

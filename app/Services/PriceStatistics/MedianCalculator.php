@@ -25,17 +25,6 @@ class MedianCalculator
         return $result;
     }
 
-    /**
-     * TZ 11-bo'lim, "Tozalash" bosqichlari:
-     *
-     * 1. Narxning global chegaralari.
-     * 2. Nol va aniq to'liqsiz narxlar chiqarib tashlanadi
-     *    ($globalMinPrice/$globalMaxPrice orqali — 0 va sozlangan
-     *    minimumdan past "to'liqsiz" narxlar shu chegara bilan chiqib ketadi).
-     * 3. sample_size $iqrMinSampleSize'dan (TZ: 20) boshlab IQR qo'llaniladi:
-     *    Q1 - 1.5*IQR va Q3 + 1.5*IQR.
-     * 4. Kichikroq tanlanmada — faqat sozlangan (global) chegaralar.
-     */
     public function filterOutliers(array $prices, int $globalMinPrice, int $globalMaxPrice, int $iqrMinSampleSize): array
     {
         // 1-2 bosqich: global chegaralar (shu bilan nol va "to'liqsiz" narxlar ham chiqadi).

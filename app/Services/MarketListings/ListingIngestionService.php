@@ -13,10 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class ListingIngestionService
 {
-    /**
-     * TZ bo'lim 12: "Snapshot" rejimida ikkita muvaffaqiyatli to'liq
-     * ko'rib chiqishda topilmasa (missing_runs >= 2) — e'lon inactive bo'ladi.
-     */
+
     private const MAX_MISSING_RUNS = 2;
 
     public function __construct(
@@ -119,11 +116,6 @@ class ListingIngestionService
         });
     }
 
-    /**
-     * TZ bo'lim 12 ("Snapshot"): target to'liq ko'rilgandan keyin chaqiriladi.
-     *
-     * @param  array<int, string>  $seenExternalIds
-     */
     public function markMissingForModel(int $sourceId, int $modelId, array $seenExternalIds): void
     {
         $query = MarketListing::query()

@@ -6,40 +6,19 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-/**
- * O'zbekiston Markaziy banki (cbu.uz) rasmiy JSON API'sidan valyuta
- * kurslarini olib, bazaga (ExchangeRate) yozadi.
- *
- * cbu.uz javobi HAR DOIM O'ZINING BUGUNGI (bank ish kuni) kursini qaytaradi —
- * sana parametri berilmasa. Javobdagi har bir elementning o'zida ham
- * "Date" maydoni bor (DD.MM.YYYY formatida) — biz o'sha sanani ishlatamiz,
- * server vaqtini emas, chunki bank kursi e'lon qilingan sana bilan bizning
- * so'rov yuborgan vaqtimiz boshqacha bo'lishi mumkin (masalan tunda 00:01'da
- * so'rov yuborilsa, bank hali kechagi kursni ko'rsatib turgan bo'lishi mumkin).
- */
 class CbuExchangeRateFetcher
 {
     private const API_URL = 'https://cbu.uz/ru/arkhiv-kursov-valyut/json/';
 
     private const SOURCE_LABEL = 'cbu.uz';
 
-    /**
-     * Bizga narxlarni to'g'ri UZS'ga o'girish uchun shu ikkitasi yetarli.
-     * Kelajakda boshqa valyuta kerak bo'lsa, shu ro'yxatga qo'shish yetarli.
-     *
-     * @var array<int, string>
-     */
     private const TRACKED_CURRENCIES = ['USD', 'EUR'];
 
     public function __construct(
         private readonly ExchangeRateService $exchangeRateService,
     ) {}
 
-    /**
-     * @return array<string, float> Muvaffaqiyatli yangilangan valyutalar va ularning kursi
-     *
-     * @throws \RuntimeException API'dan javob kelmasa yoki kutilgan valyutalar topilmasa
-     */
+
     public function fetchAndStore(): array
     {
         $response = Http::timeout(15)->get(self::API_URL);

@@ -18,13 +18,6 @@ final class ListingData
         public readonly ?string $region,
         public readonly ?string $city,
         public readonly ?\DateTimeImmutable $sourcePublishedAt,
-        // Agar parser allaqachon parser_target orqali qaysi brand/model
-        // ekanini aniq bilsa (masalan OlxUzAdapter — sahifa o'zi
-        // ParserTarget.brand_id/model_id bilan bog'langan), shu ID'lar
-        // to'g'ridan-to'g'ri beriladi va alias orqali qayta izlanmaydi.
-        // Tashqi HTTP Ingestion API orqali kelgan ma'lumotda bular hech
-        // qachon berilmaydi (parser bizning ichki ID'larimizni bilmaydi),
-        // o'sha holatda har doim brandRaw/modelRaw orqali alias izlanadi.
         public readonly ?int $knownBrandId = null,
         public readonly ?int $knownModelId = null,
         public readonly ?string $contentHash = null,

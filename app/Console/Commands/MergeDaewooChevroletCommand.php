@@ -11,14 +11,7 @@ use App\Models\OfficialOffer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-/**
- * O'zbekistonda Damas/Matiz/Nexia kabi modellar OLX'da "Daewoo" deb yoziladi,
- * lekin rasmiy — "Chevrolet". Alias tizimi ularni ikkita alohida model qilib
- * yaratadi. Bu buyruq FAQAT Daewoo↔Chevrolet bir xil nomli juftlarni topib,
- * Daewoo modelini Chevrolet modeliga birlashtiradi (boshqa brendlarga tegmaydi).
- *
- * Xavfsiz: har birini tranzaksiyada bajaradi. --dry-run bilan avval ko'ring.
- */
+
 class MergeDaewooChevroletCommand extends Command
 {
     protected $signature = 'catalog:merge-daewoo-chevrolet {--dry-run : Faqat ko\'rsatadi, o\'zgartirmaydi}';
