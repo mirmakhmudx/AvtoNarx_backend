@@ -215,12 +215,15 @@ class ParserTargetResource extends Resource
                     ->deselectRecordsAfterCompletion(),
 
                 Tables\Actions\BulkAction::make('deactivate')
-                    ->label(__('Tanlanganlarni o\'chirish'))
+                    ->label(__('Tanlanganlarni faolsizlantirish'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(fn (Collection $records) => $records->each->update(['is_active' => false]))
                     ->deselectRecordsAfterCompletion(),
+
+                Tables\Actions\DeleteBulkAction::make()
+                    ->label(__('Tanlanganlarni butunlay o\'chirish')),
             ]);
     }
 

@@ -205,5 +205,7 @@
     "Recovery kodlarni yangilash": "Regenerate recovery codes",
     "2FA'ni o'chirish": "Disable 2FA",
     "Rasmiy narx": "Official price",
-    "rasmiy narx": "official price"
+    "rasmiy narx": "official price",
+    "Tanlanganlarni faolsizlantirish": "Deactivate selected",
+    "Tanlanganlarni butunlay o'chirish": "Delete selected permanently"
 }

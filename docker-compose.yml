@@ -54,7 +54,7 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: avtonarx_queue
     working_dir: /var/www/html
-    command: php artisan queue:work --tries=3 --backoff=5 --timeout=3600
+    command: php artisan queue:work --queue=parser,ingestion,statistics,default --tries=3 --backoff=5 --timeout=3600
     volumes:
       - ./:/var/www/html
     depends_on:
