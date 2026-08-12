@@ -63,6 +63,7 @@ services:
     networks:
       - avtonarx
 
+
   scheduler:
     build:
       context: .
