@@ -4,38 +4,19 @@ info:
   title: AvtoNarx Backend API
   version: "1.0.0"
   description: |
-    AvtoNarx backend — avtomobil bozor narxlari (ikkilamchi bozor medianasi) va
-    rasmiy narxlar API'si.
 
-    ## Autentifikatsiya
-    - **Public API** — autentifikatsiyasiz.
-    - **Ingestion API** (parser uchun) — `Authorization: Bearer <token>` (Laravel Sanctum).
-
-    ## Rate limiting (TZ 13)
-    - Public: **120 so'rov/daqiqa/IP**.
-    - Ingestion: **30 so'rov/daqiqa/token**.
-    - Chegara oshsa `429 Too Many Requests`.
-
-    ## Idempotentlik (TZ 9)
-    Batch yuborishda `Idempotency-Key` (UUID) sarlavhasi majburiy. Bir xil
-    `batch_id` + bir xil tarkib qayta yuborilsa avvalgi natija qaytariladi;
-    bir xil `batch_id` boshqa tarkib bilan yuborilsa `409` qaytariladi.
-
-    ## Katta payloadlar (TZ 8.1)
-    Parser katta batchlarni `Content-Encoding: gzip` bilan yuborishi mumkin —
-    backend uni ochadi.
 
 servers:
   - url: /
-    description: Joriy host
+    description: Current host
 
 tags:
   - name: Public
-    description: Frontend uchun ochiq (autentifikatsiyasiz) endpointlar.
+    description: Open (no authentication) endpoints for the frontend.
   - name: Ingestion
-    description: Parser uchun ma'lumot yuklash endpointlari (Bearer token).
+    description: Data ingestion endpoints for the parser (Bearer token).
   - name: Health
-    description: Sog'liq va tayyorlik endpointlari (TZ 20).
+    description: Liveness and readiness endpoints (TZ 20).
 
 security: []
 
@@ -44,10 +25,10 @@ paths:
   /api/v1/brands:
     get:
       tags: [Public]
-      summary: Faol markalar ro'yxati
+      summary: List of active brands
       responses:
         "200":
-          description: Markalar ro'yxati
+          description: List of brands
           content:
             application/json:
               schema:
@@ -61,7 +42,7 @@ paths:
   /api/v1/brands/{slug}:
     get:
       tags: [Public]
-      summary: Bitta markani slug bo'yicha olish
+      summary: Get a single brand by slug
       parameters:
         - name: slug
           in: path
@@ -69,7 +50,7 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: Marka
+          description: Brand
           content:
             application/json:
               schema:
@@ -82,7 +63,7 @@ paths:
   /api/v1/brands/{brandSlug}/models:
     get:
       tags: [Public]
-      summary: Marka modellari (rasmiy va bozor narxi bilan), sahifalangan
+      summary: Brand models (with official and market price), paginated
       parameters:
         - name: brandSlug
           in: path
@@ -98,7 +79,7 @@ paths:
           schema: { type: integer, minimum: 1 }
       responses:
         "200":
-          description: Modellar ro'yxati
+          description: List of models
           content:
             application/json:
               schema:
@@ -114,12 +95,12 @@ paths:
   /api/v1/models/{carModel}/prices:
     get:
       tags: [Public]
-      summary: Model bo'yicha yillik bozor narxlari va rasmiy narx
+      summary: Yearly market prices and official price for a model
       parameters:
         - name: carModel
           in: path
           required: true
-          description: Model ID'si
+          description: Model ID
           schema: { type: integer }
         - name: year
           in: query
@@ -128,11 +109,11 @@ paths:
         - name: region
           in: query
           required: false
-          description: Hudud kodi (masalan `tashkent`). Berilmasa — butun mamlakat.
+          description: Region code (e.g. `tashkent`). If omitted — whole country.
           schema: { type: string }
       responses:
         "200":
-          description: Narx statistikasi
+          description: Price statistics
           headers:
             ETag:
               schema: { type: string }
@@ -142,22 +123,22 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ModelPrices" }
         "304":
-          description: O'zgarmagan (If-None-Match mos keldi)
+          description: Not modified (If-None-Match matched)
         "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /api/v1/filters:
     get:
       tags: [Public]
-      summary: Filtr qiymatlari (yillar, hududlar)
+      summary: Filter values (years, regions)
       parameters:
         - name: brand
           in: query
           required: false
-          description: Marka slug'i bo'yicha filtrlarni cheklash
+          description: Restrict filters by brand slug
           schema: { type: string }
       responses:
         "200":
-          description: Filtr qiymatlari
+          description: Filter values
           content:
             application/json:
               schema:
@@ -186,7 +167,7 @@ paths:
   /api/v1/ingestion/market-listings/batches:
     post:
       tags: [Ingestion]
-      summary: Bozor e'lonlari batch'ini yuborish
+      summary: Submit a batch of market listings
       security:
         - bearerAuth: []
       parameters:
@@ -207,7 +188,7 @@ paths:
   /api/v1/ingestion/official-offers/batches:
     post:
       tags: [Ingestion]
-      summary: Rasmiy takliflar batch'ini yuborish
+      summary: Submit a batch of official offers
       security:
         - bearerAuth: []
       parameters:
@@ -228,7 +209,7 @@ paths:
   /api/v1/ingestion/batches/{batchId}:
     get:
       tags: [Ingestion]
-      summary: Batch holati va (birinchi 20 ta) xatolari
+      summary: Batch status and (first 20) errors
       security:
         - bearerAuth: []
       parameters:
@@ -238,7 +219,7 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         "200":
-          description: Batch holati
+          description: Batch status
           content:
             application/json:
               schema:
@@ -252,7 +233,7 @@ paths:
   /api/v1/ingestion/batches/{batchId}/errors:
     get:
       tags: [Ingestion]
-      summary: Batch item xatolari (sahifalangan)
+      summary: Batch item errors (paginated)
       security:
         - bearerAuth: []
       parameters:
@@ -266,7 +247,7 @@ paths:
           schema: { type: integer, minimum: 1 }
       responses:
         "200":
-          description: Xatolarning sahifalangan ro'yxati (Laravel paginator)
+          description: Paginated list of errors (Laravel paginator)
           content:
             application/json:
               schema:
@@ -286,7 +267,7 @@ paths:
   /api/v1/ingestion/heartbeat:
     post:
       tags: [Ingestion]
-      summary: Parser "tirik" signali (last_seen_at yangilanadi)
+      summary: Parser "alive" signal (updates last_seen_at)
       security:
         - bearerAuth: []
       responses:
@@ -305,12 +286,12 @@ paths:
   /api/v1/ingestion/catalog:
     get:
       tags: [Ingestion]
-      summary: Faol markalar/modellar katalogi (parser normalizatsiyasi uchun)
+      summary: Catalog of active brands/models (for parser normalization)
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Katalog
+          description: Catalog
           content:
             application/json:
               schema:
@@ -342,18 +323,18 @@ paths:
   /up:
     get:
       tags: [Health]
-      summary: Liveness (Laravel standarti)
+      summary: Liveness (Laravel default)
       responses:
         "200":
-          description: Ilova ishlayapti
+          description: Application is running
 
   /health/live:
     get:
       tags: [Health]
-      summary: Liveness — jarayon tirikmi (bog'liqliksiz)
+      summary: Liveness — is the process alive (no dependencies)
       responses:
         "200":
-          description: Tirik
+          description: Alive
           content:
             application/json:
               schema:
@@ -364,15 +345,15 @@ paths:
   /health/ready:
     get:
       tags: [Health]
-      summary: Readiness — DB va cache tekshiruvi
+      summary: Readiness — DB and cache check
       responses:
         "200":
-          description: Tayyor
+          description: Ready
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ReadinessStatus" }
         "503":
-          description: Tayyor emas (biror bog'liqlik yiqilgan)
+          description: Not ready (a dependency is down)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ReadinessStatus" }
@@ -383,14 +364,14 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      description: Laravel Sanctum shaxsiy access token'i.
+      description: Laravel Sanctum personal access token.
 
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      description: Batch uchun idempotentlik kaliti (UUID).
+      description: Idempotency key for the batch (UUID).
       schema: { type: string, format: uuid }
 
   schemas:
@@ -407,7 +388,7 @@ components:
             - type: string
         models_count:
           type: integer
-          description: Faqat carModels soni yuklangan bo'lsa mavjud.
+          description: Present only when the carModels count has been loaded.
 
     CarModel:
       type: object
@@ -423,7 +404,7 @@ components:
         market_price: { $ref: "#/components/schemas/MarketPrice" }
 
     OfficialPrice:
-      description: Rasmiy narx yoki null.
+      description: Official price, or null.
       oneOf:
         - type: "null"
         - type: object
@@ -436,7 +417,7 @@ components:
               oneOf: [{ type: "null" }, { type: string }]
 
     MarketPrice:
-      description: Vakil bozor narxi (mediana) yoki null.
+      description: Representative market price (median), or null.
       oneOf:
         - type: "null"
         - type: object
@@ -445,6 +426,8 @@ components:
             currency: { type: string, examples: ["UZS"] }
             statistic: { type: string, examples: ["median"] }
             sample_size: { type: integer }
+            period_from:
+              oneOf: [{ type: "null" }, { type: string, format: date-time }]
             period_to:
               oneOf: [{ type: "null" }, { type: string, format: date-time }]
             method_version: { type: string }
@@ -462,7 +445,7 @@ components:
           items: { $ref: "#/components/schemas/MarketPricesEntry" }
 
     MarketPricesEntry:
-      description: Bir yil bo'yicha statistika (ok) yoki yetarli emas holati.
+      description: Statistics for one year (ok), or an insufficient-data state.
       oneOf:
         - type: object
           title: OK
@@ -504,7 +487,7 @@ components:
       required: [batch_id, source, mode, collected_at, items]
       properties:
         batch_id: { type: string, format: uuid }
-        source: { type: string, description: "Manba kodi (sources.code)." }
+        source: { type: string, description: "Source code (sources.code)." }
         mode: { type: string, enum: [incremental, snapshot, offline_html] }
         parser_version: { type: string, maxLength: 50 }
         collected_at: { type: string, format: date-time }
@@ -519,10 +502,10 @@ components:
       required: [external_id, url, brand, model, year, price, observed_at, content_hash]
       properties:
         external_id: { type: string, maxLength: 255 }
-        url: { type: string, format: uri, maxLength: 1000, description: "Manba domeniga tegishli bo'lishi shart." }
+        url: { type: string, format: uri, maxLength: 1000, description: "Must belong to the source's domain." }
         brand: { type: string, maxLength: 180 }
         model: { type: string, maxLength: 180 }
-        year: { type: integer, minimum: 1950, description: "Yuqori chegara: joriy yil + 1." }
+        year: { type: integer, minimum: 1950, description: "Upper bound: current year + 1." }
         price: { $ref: "#/components/schemas/Price" }
         condition: { type: string, enum: [new, used, unknown] }
         seller_type: { type: string }
@@ -533,7 +516,7 @@ components:
             city: { type: string, maxLength: 180 }
         observed_at: { type: string, format: date-time }
         published_at: { type: string, format: date-time }
-        content_hash: { type: string, pattern: "^[0-9a-fA-F]{64}$", description: "SHA-256 (64 hex)." }
+        content_hash: { type: string, pattern: "^[0-9a-fA-F]{64}$", description: "SHA-256 (64 hex chars)." }
 
     OfficialOfferBatch:
       type: object
@@ -570,7 +553,7 @@ components:
       type: object
       required: [amount, currency]
       properties:
-        amount: { type: integer, minimum: 1, description: "Butun son (tiyin emas, so'm)." }
+        amount: { type: integer, minimum: 1, description: "Whole number (in so'm, not tiyin)." }
         currency: { type: string, enum: [UZS, USD] }
 
     BatchAcceptedBody:
@@ -587,7 +570,7 @@ components:
           type: object
           properties:
             request_id: { type: string, format: uuid }
-            note: { type: string, description: "Idempotent takror so'rovda mavjud." }
+            note: { type: string, description: "Present on an idempotent repeat request." }
 
     BatchStatus:
       type: object
@@ -644,43 +627,43 @@ components:
   responses:
 
     BatchAccepted:
-      description: Batch qabul qilindi (yoki idempotent takror)
+      description: Batch accepted (or an idempotent repeat)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/BatchAcceptedBody" }
 
     Unauthorized:
-      description: Autentifikatsiya talab qilinadi
+      description: Authentication required
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
 
     Forbidden:
-      description: Ruxsat yo'q (client faol emas / manbaga ruxsat yo'q / begona batch)
+      description: Not allowed (client inactive / no access to source / foreign batch)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
 
     NotFound:
-      description: Topilmadi
+      description: Not found
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
 
     Conflict:
-      description: duplicate_batch_conflict — bir xil batch_id boshqa tarkib/client bilan
+      description: duplicate_batch_conflict — same batch_id with different content/client
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
 
     ValidationFailed:
-      description: Validatsiya xatosi
+      description: Validation error
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ValidationError" }
 
     TooManyRequests:
-      description: Rate limit oshdi (TZ 13)
+      description: Rate limit exceeded (TZ 13)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
