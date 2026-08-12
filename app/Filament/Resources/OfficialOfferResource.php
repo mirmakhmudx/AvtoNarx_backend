@@ -71,10 +71,6 @@ class OfficialOfferResource extends Resource
                             ->searchable()
                             ->required(),
 
-                        Forms\Components\TextInput::make('trim_name')
-                            ->label(__('Komplektatsiya'))
-                            ->maxLength(120),
-
                         Forms\Components\Select::make('year')
                             ->label(__('Yil'))
                             ->options(function (): array {
@@ -84,11 +80,6 @@ class OfficialOfferResource extends Resource
                             })
                             ->searchable()
                             ->native(false),
-
-                        Forms\Components\TextInput::make('external_id')
-                            ->label(__('Tashqi ID'))
-                            ->helperText(__('Ixtiyoriy — manbadagi ichki identifikator'))
-                            ->maxLength(255),
                     ]),
 
                 Forms\Components\Section::make('Narx')
