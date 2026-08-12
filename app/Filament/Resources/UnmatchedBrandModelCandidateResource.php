@@ -81,8 +81,10 @@ class UnmatchedBrandModelCandidateResource extends Resource
 
                 Tables\Columns\TextColumn::make('discovered_url')
                     ->label(__('Havola'))
-                    ->url(fn (UnmatchedBrandModelCandidate $record): string => $record->discovered_url)
-                    ->openUrlInNewTab()
+                    ->url(fn (UnmatchedBrandModelCandidate $record): string => 'https://www.olx.uz/transport/legkovye-avtomobili/'
+                        . \Illuminate\Support\Str::slug($record->brand_name_raw)
+                        . '/?currency=UZS&search%5Bfilter_enum_model%5D%5B0%5D='
+                        . \Illuminate\Support\Str::slug($record->model_name_raw))                    ->openUrlInNewTab()
                     ->formatStateUsing(fn () => __('Ko\'rish'))
                     ->color('primary'),
 

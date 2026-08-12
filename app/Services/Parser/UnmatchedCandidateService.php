@@ -89,6 +89,12 @@ class UnmatchedCandidateService
         $this->aliasService->verify($modelAlias);
 
         // Parser target — endi shu model uchun ham narx yig'ila boshlaydi
+        // URL'ni OLX universal filtr formatida quramiz (barcha markada ishlaydi).
+        $brand = \App\Models\Brand::find($brandId);
+        $targetUrl = ($brand && $brand->slug && $carModel->slug)
+            ? \App\Console\Commands\FixTargetUrlsCommand::olxModelUrl($brand->slug, $carModel->slug)
+            : $candidate->discovered_url;
+
         ParserTarget::updateOrCreate(
             [
                 'source_id' => $candidate->source_id,
@@ -96,7 +102,7 @@ class UnmatchedCandidateService
             ],
             [
                 'brand_id' => $brandId,
-                'target_url' => $candidate->discovered_url,
+                'target_url' => $targetUrl,
                 'is_active' => true,
             ]
         );

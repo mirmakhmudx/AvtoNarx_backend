@@ -54,10 +54,7 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: avtonarx_queue
     working_dir: /var/www/html
-    # Ba'zi job'lar maxsus navbatlarga yuboriladi (parser, statistics,
-    # ingestion) — --queue ro'yxatida bo'lmasa, ular butunlay e'tiborsiz
-    # qoldirilib, "jobs" jadvalida abadiy kutib qoladi.
-    command: php artisan queue:work --queue=default,parser,statistics,ingestion --tries=3 --backoff=5 --timeout=3600
+    command: php artisan queue:work --queue=parser,ingestion,statistics,default --tries=3 --backoff=5 --timeout=3600
     volumes:
       - ./:/var/www/html
     depends_on:
@@ -65,6 +62,7 @@ services:
       - redis
     networks:
       - avtonarx
+
 
   scheduler:
     build:
