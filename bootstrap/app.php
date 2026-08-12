@@ -13,7 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Ilova FrankenPHP/Caddy (host) -> nginx -> php-fpm zanjiri orqasida
+        // ishlaydi. Bularning barchasi bizning nazoratimizdagi ichki
+        // reverse-proxy'lar, shuning uchun barchasiga ishonamiz — aks holda
+        // Laravel X-Forwarded-Proto'ni e'tiborsiz qoldirib, asset/route
+        // havolalarini https o'rniga http bilan generatsiya qiladi (mixed
+        // content xatosiga olib keladi).
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // TZ 4: Sentry'ga xatolarni yuborish. Paket o'rnatilmagan bo'lsa ham
