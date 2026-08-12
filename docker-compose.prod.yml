@@ -107,7 +107,14 @@ services:
       dockerfile: docker/php/Dockerfile.prod
     container_name: avtonarx_queue
     restart: unless-stopped
-    command: php artisan queue:work --tries=3 --backoff=5 --timeout=3600
+    # Ayrim job'lar maxsus navbatlarga yuboriladi (onQueue('parser') va h.k.:
+    # RunParserTargetsChunkJob/RunUzumAvtoMarketJob -> parser,
+    # RecalculateStatisticsJob -> statistics,
+    # ProcessOfficialOfferBatchJob/ProcessIngestionBatchJob -> ingestion).
+    # --queue ro'yxatida ko'rsatilmagan navbatlar butunlay e'tiborsiz
+    # qoldiriladi va ishlar "jobs" jadvalida abadiy kutib qoladi — shuning
+    # uchun barchasini aniq sanab o'tamiz.
+    command: php artisan queue:work --queue=default,parser,statistics,ingestion --tries=3 --backoff=5 --timeout=3600
     env_file:
       - .env
     volumes:
