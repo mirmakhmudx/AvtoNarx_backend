@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
-    // Public API — TZ 13: 120 so'rov/daqiqa/IP
     Route::middleware('throttle:public-api')->group(function () {
         Route::get('brands', [PublicBrandController::class, 'index']);
         Route::get('brands/{slug}', [PublicBrandController::class, 'show']);
@@ -23,11 +22,7 @@ Route::prefix('v1')->group(function () {
         Route::get('filters', [FilterController::class, 'index']);
     });
 
-    // Parser / Ingestion API — Sanctum token bilan himoyalangan.
-    // TZ 13: 30 so'rov/daqiqa/token. throttle auth'dan KEYIN turadi — shunda
-    // limiter token bo'yicha kalitlay oladi.
-    // DecodeGzipRequest eng oldinda: parser gzip yuborsa (TZ 8.1), tanani ochib
-    // beradi, shunda validatsiya to'g'ri JSON ko'radi.
+
     Route::middleware([
         DecodeGzipRequest::class,
         'auth:sanctum',
